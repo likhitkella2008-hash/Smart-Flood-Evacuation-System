@@ -1,0 +1,2703 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Smart Flood Evacuation & Rescue
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+
+<!-- =====================================================
+     LOGIN SCREEN
+===================================================== -->
+
+<div id="loginScreen">
+
+    <div class="login-card">
+
+        <div class="logo">
+            🛡️
+        </div>
+
+        <h1>
+            Smart Flood
+        </h1>
+
+        <p class="subtitle">
+            Evacuation & Rescue System
+        </p>
+
+
+        <!-- ROLE SELECT -->
+
+        <div class="role-buttons">
+
+            <button
+                onclick="selectRole('citizen')"
+                id="citizenRoleBtn"
+                class="role-btn active"
+            >
+                Citizen
+            </button>
+
+            <button
+                onclick="selectRole('admin')"
+                id="adminRoleBtn"
+                class="role-btn"
+            >
+                Admin
+            </button>
+
+            <button
+                onclick="selectRole('rescue')"
+                id="rescueRoleBtn"
+                class="role-btn"
+            >
+                Rescue Team
+            </button>
+
+        </div>
+
+
+        <!-- LOGIN FORM -->
+
+        <div id="loginForm">
+
+            <label>
+                Username
+            </label>
+
+            <input
+                id="loginUsername"
+                type="text"
+                placeholder="Enter username"
+            >
+
+
+            <label>
+                Password
+            </label>
+
+            <input
+                id="loginPassword"
+                type="password"
+                placeholder="Enter password"
+            >
+
+
+            <button
+                class="primary-btn full"
+                onclick="login()"
+            >
+                Login
+            </button>
+
+
+            <button
+                id="registerLink"
+                class="text-btn"
+                onclick="showRegister()"
+            >
+                New citizen? Create account
+            </button>
+
+        </div>
+
+
+        <!-- REGISTER -->
+
+        <div
+            id="registerForm"
+            class="hidden"
+        >
+
+            <h2>
+                Create Citizen Account
+            </h2>
+
+
+            <label>
+                Full Name
+            </label>
+
+            <input
+                id="regName"
+                type="text"
+                placeholder="Your name"
+            >
+
+
+            <label>
+                Username
+            </label>
+
+            <input
+                id="regUsername"
+                type="text"
+                placeholder="Create username"
+            >
+
+
+            <label>
+                Password
+            </label>
+
+            <input
+                id="regPassword"
+                type="password"
+                placeholder="Create password"
+            >
+
+
+            <label>
+                Phone Number
+            </label>
+
+            <input
+                id="regPhone"
+                type="text"
+                placeholder="10 digit phone number"
+            >
+
+
+            <label>
+                Home Location
+            </label>
+
+            <input
+                id="regLocation"
+                type="text"
+                placeholder="Example: Gandhipuram"
+            >
+
+
+            <button
+                class="primary-btn full"
+                onclick="registerCitizen()"
+            >
+                Create Account
+            </button>
+
+
+            <button
+                class="text-btn"
+                onclick="showLogin()"
+            >
+                Back to Login
+            </button>
+
+        </div>
+
+
+        <div
+            id="loginMessage"
+            class="message"
+        ></div>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     APPLICATION
+===================================================== -->
+
+<div
+    id="app"
+    class="hidden"
+>
+
+
+<header>
+
+    <div class="brand">
+
+        <div class="brand-icon">
+            🛡️
+        </div>
+
+        <div>
+
+            <h2>
+                Smart Flood
+            </h2>
+
+            <span id="headerRole">
+                EVACUATION & RESCUE
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="header-right">
+
+        <span id="headerUser">
+        </span>
+
+        <button
+            onclick="logout()"
+            class="logout-btn"
+        >
+            Logout
+        </button>
+
+    </div>
+
+</header>
+
+
+<!-- =====================================================
+     CITIZEN DASHBOARD
+===================================================== -->
+
+<section
+    id="citizenDashboard"
+    class="dashboard hidden"
+>
+
+    <div class="hero">
+
+        <div class="eyebrow">
+            CITIZEN PORTAL
+        </div>
+
+        <h1>
+            Stay safe, stay informed.
+        </h1>
+
+        <p>
+            Request emergency assistance and
+            track your rescue operation.
+        </p>
+
+    </div>
+
+
+    <!-- NOTIFICATIONS -->
+
+    <div class="section">
+
+        <div class="section-title">
+
+            <h2>
+                Notifications
+            </h2>
+
+        </div>
+
+        <div id="citizenNotifications">
+        </div>
+
+    </div>
+
+
+    <!-- REQUEST FORM -->
+
+    <div class="section">
+
+        <div class="section-title">
+
+            <h2>
+                Report Flood Emergency
+            </h2>
+
+            <p>
+                Submit your emergency assistance request.
+                The administrator will review it.
+            </p>
+
+        </div>
+
+
+        <div class="form-grid">
+
+            <div>
+
+                <label>
+                    Current Location
+                </label>
+
+                <input
+                    id="reqLocation"
+                    type="text"
+                    placeholder="Example: Gandhipuram"
+                >
+
+            </div>
+
+
+            <div>
+
+                <label>
+                    Emergency Phone
+                </label>
+
+                <input
+                    id="reqPhone"
+                    type="text"
+                    placeholder="Emergency contact number"
+                >
+
+            </div>
+
+
+            <div>
+
+                <label>
+                    Number of People
+                </label>
+
+                <input
+                    id="reqPeople"
+                    type="number"
+                    min="1"
+                    value="1"
+                >
+
+            </div>
+
+
+            <div>
+
+                <label>
+                    Flood Level
+                </label>
+
+                <select id="reqFlood">
+
+                    <option value="1">
+                        Level 1 - Low
+                    </option>
+
+                    <option value="2">
+                        Level 2 - Rising
+                    </option>
+
+                    <option value="3">
+                        Level 3 - Moderate
+                    </option>
+
+                    <option value="4">
+                        Level 4 - High
+                    </option>
+
+                    <option value="5">
+                        Level 5 - Critical
+                    </option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <label>
+            Additional Details
+        </label>
+
+        <textarea
+            id="reqDetails"
+            placeholder="Describe the emergency..."
+        ></textarea>
+
+
+        <button
+            class="danger-btn"
+            onclick="submitRequest()"
+        >
+            🚨 Submit Emergency Request
+        </button>
+
+
+        <div
+            id="requestMessage"
+            class="message"
+        ></div>
+
+    </div>
+
+
+    <!-- MY REQUESTS -->
+
+    <div class="section">
+
+        <div class="section-header">
+
+            <div class="section-title">
+
+                <h2>
+                    My Emergency Requests
+                </h2>
+
+                <p>
+                    Track the status of your cases.
+                </p>
+
+            </div>
+
+            <button
+                class="secondary-btn"
+                onclick="loadCitizenData()"
+            >
+                ↻ Refresh
+            </button>
+
+        </div>
+
+
+        <div id="citizenRequests">
+        </div>
+
+    </div>
+
+<!-- LIVE WEATHER MONITORING -->
+<div class="section" id="citizenWeatherSection">
+
+    <div class="section-header">
+        <div class="section-title">
+            <h2>🌦️ Live Weather Monitoring</h2>
+            <p>Current weather and hourly rainfall forecast.</p>
+        </div>
+
+        <button
+            class="secondary-btn"
+            type="button"
+            onclick="loadLiveWeather(true)">
+            ↻ Refresh Weather
+        </button>
+    </div>
+
+    <div class="form-grid">
+        <div>
+            <label for="weatherCity">City / Location</label>
+            <input
+                id="weatherCity"
+                type="text"
+                value="Coimbatore"
+                placeholder="Enter city name">
+        </div>
+
+        <div>
+            <button
+                class="primary-btn"
+                type="button"
+                onclick="loadLiveWeather(true)">
+                Get Weather
+            </button>
+        </div>
+    </div>
+
+    <div id="weatherMessage" class="message">
+        Loading weather information...
+    </div>
+
+    <div id="weatherCards" class="card-grid">
+
+        <div class="mini-card">
+            <h3>🌡️ Temperature</h3>
+            <strong id="weatherTemperature">—</strong>
+            <p>Current temperature</p>
+        </div>
+
+        <div class="mini-card">
+            <h3>💧 Humidity</h3>
+            <strong id="weatherHumidity">—</strong>
+            <p>Relative humidity</p>
+        </div>
+
+        <div class="mini-card">
+            <h3>💨 Wind Speed</h3>
+            <strong id="weatherWind">—</strong>
+            <p>Current wind speed</p>
+        </div>
+
+        <div class="mini-card">
+            <h3>🌧️ Rainfall</h3>
+            <strong id="weatherRain">—</strong>
+            <p>Precipitation</p>
+        </div>
+
+    </div>
+
+    <div class="mini-card" style="margin-top: 18px;">
+        <h3>📈 Hourly Rainfall Forecast</h3>
+        <div id="weatherHourly">
+            <p>Hourly forecast will appear here.</p>
+        </div>
+    </div>
+
+    <p id="weatherUpdatedAt">
+        Weather will update when the citizen dashboard opens.
+    </p>
+
+</div>
+
+</section>
+<!-- =====================================================
+     ADMIN DASHBOARD
+===================================================== -->
+
+<section
+    id="adminDashboard"
+    class="dashboard hidden"
+>
+
+    <div class="hero">
+
+        <div class="eyebrow">
+            ADMIN CONTROL CENTER
+        </div>
+
+        <h1>
+            Flood Emergency Operations
+        </h1>
+
+        <p>
+            Review citizen cases, assign rescue teams
+            and coordinate shelters.
+        </p>
+
+    </div>
+
+
+    <!-- STATISTICS -->
+
+    <div class="stats">
+
+        <div class="stat-card">
+
+            <strong id="statTotal">
+                0
+            </strong>
+
+            <span>
+                Total Cases
+            </span>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <strong id="statPending">
+                0
+            </strong>
+
+            <span>
+                Pending
+            </span>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <strong id="statProgress">
+                0
+            </strong>
+
+            <span>
+                In Progress
+            </span>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <strong id="statRescued">
+                0
+            </strong>
+
+            <span>
+                Rescued
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <!-- CASES -->
+
+    <div class="section">
+
+        <div class="section-header">
+
+            <div class="section-title">
+
+                <h2>
+                    Emergency Cases
+                </h2>
+
+                <p>
+                    Every citizen request appears here.
+                </p>
+
+            </div>
+
+            <button
+                class="secondary-btn"
+                onclick="loadAdminData()"
+            >
+                ↻ Refresh
+            </button>
+
+        </div>
+
+
+        <div id="adminRequests">
+        </div>
+
+    </div>
+
+
+    <!-- TEAMS -->
+
+    <div class="section">
+
+        <div class="section-title">
+
+            <h2>
+                Rescue Teams
+            </h2>
+
+            <p>
+                Monitor team availability.
+            </p>
+
+        </div>
+
+
+        <div id="adminTeams"
+             class="card-grid">
+        </div>
+
+    </div>
+
+
+    <!-- SHELTERS -->
+
+    <div class="section">
+
+        <div class="section-title">
+
+            <h2>
+                Shelters
+            </h2>
+
+            <p>
+                Monitor safe shelter capacity.
+            </p>
+
+        </div>
+
+
+        <div id="adminShelters"
+             class="card-grid">
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     RESCUE DASHBOARD
+===================================================== -->
+
+<section
+    id="rescueDashboard"
+    class="dashboard hidden"
+>
+
+    <div class="hero">
+
+        <div class="eyebrow">
+            RESCUE OPERATIONS
+        </div>
+
+        <h1>
+            Assigned Emergency Cases
+        </h1>
+
+        <p>
+            Respond to cases assigned by the administrator.
+        </p>
+
+    </div>
+
+
+    <div class="section">
+
+        <div class="section-header">
+
+            <div class="section-title">
+
+                <h2>
+                    My Assigned Cases
+                </h2>
+
+                <p>
+                    You can only operate on cases
+                    assigned to your rescue team.
+                </p>
+
+            </div>
+
+            <button
+                class="secondary-btn"
+                onclick="loadRescueData()"
+            >
+                ↻ Refresh
+            </button>
+
+        </div>
+
+
+        <div id="rescueRequests">
+        </div>
+
+    </div>
+
+</section>
+
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   GLOBAL
+========================================================= */
+
+let currentRole = "citizen";
+
+
+/* =========================================================
+   ROLE
+========================================================= */
+
+function selectRole(role) {
+
+    currentRole = role;
+
+    document
+        .querySelectorAll(".role-btn")
+        .forEach(btn => {
+            btn.classList.remove("active");
+        });
+
+    document
+        .getElementById(
+            role + "RoleBtn"
+        )
+        .classList.add("active");
+
+
+    document
+        .getElementById("registerLink")
+        .style.display =
+            role === "citizen"
+            ? "block"
+            : "none";
+
+}
+
+
+/* =========================================================
+   REGISTER SCREEN
+========================================================= */
+
+function showRegister() {
+
+    document
+        .getElementById("loginForm")
+        .classList.add("hidden");
+
+    document
+        .getElementById("registerForm")
+        .classList.remove("hidden");
+
+}
+
+
+function showLogin() {
+
+    document
+        .getElementById("registerForm")
+        .classList.add("hidden");
+
+    document
+        .getElementById("loginForm")
+        .classList.remove("hidden");
+
+}
+
+
+/* =========================================================
+   MESSAGE
+========================================================= */
+
+function message(text, success = false) {
+
+    const box =
+        document.getElementById(
+            "loginMessage"
+        );
+
+    box.innerText = text;
+
+    box.className =
+        success
+        ? "message success"
+        : "message error";
+
+}
+
+
+/* =========================================================
+   REGISTER CITIZEN
+========================================================= */
+
+async function registerCitizen() {
+
+    const data = {
+
+        name:
+            document.getElementById(
+                "regName"
+            ).value,
+
+        username:
+            document.getElementById(
+                "regUsername"
+            ).value,
+
+        password:
+            document.getElementById(
+                "regPassword"
+            ).value,
+
+        phone:
+            document.getElementById(
+                "regPhone"
+            ).value,
+
+        location:
+            document.getElementById(
+                "regLocation"
+            ).value
+
+    };
+
+
+    const response =
+        await fetch(
+            "/register",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify(data)
+            }
+        );
+
+
+    const result =
+        await response.json();
+
+
+    if (result.success) {
+
+        showLogin();
+
+        selectRole("citizen");
+
+        document.getElementById(
+            "loginUsername"
+        ).value =
+            data.username;
+
+        message(
+            "Account created. Please login.",
+            true
+        );
+
+    }
+    else {
+
+        message(
+            result.message,
+            false
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+async function login() {
+
+    const username =
+        document.getElementById(
+            "loginUsername"
+        ).value.trim();
+
+
+    const password =
+        document.getElementById(
+            "loginPassword"
+        ).value.trim();
+
+
+    if (!username || !password) {
+
+        message(
+            "Enter username and password."
+        );
+
+        return;
+
+    }
+
+
+    let url = "";
+
+    if (currentRole === "citizen") {
+
+        url = "/citizen-login";
+
+    }
+    else if (currentRole === "admin") {
+
+        url = "/admin-login";
+
+    }
+    else {
+
+        url = "/rescue-login";
+
+    }
+
+
+    const response =
+        await fetch(
+            url,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    username,
+                    password
+                })
+            }
+        );
+
+
+    const result =
+        await response.json();
+
+
+    if (!result.success) {
+
+        message(
+            result.message
+        );
+
+        return;
+
+    }
+
+
+    openDashboard(
+        result.role
+    );
+
+}
+
+
+/* =========================================================
+   OPEN DASHBOARD
+========================================================= */
+
+function openDashboard(role) {
+
+    document
+        .getElementById("loginScreen")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("app")
+        .classList.remove("hidden");
+
+
+    document
+        .querySelectorAll(".dashboard")
+        .forEach(dashboard => {
+
+            dashboard.classList.add(
+                "hidden"
+            );
+
+        });
+
+
+    if (role === "citizen") {
+
+        document
+            .getElementById(
+                "citizenDashboard"
+            )
+            .classList.remove("hidden");
+
+
+        document.getElementById(
+            "headerRole"
+        ).innerText =
+            "CITIZEN PORTAL";
+
+
+        loadCitizenData();
+        loadLiveWeather();
+
+    }
+
+
+    else if (role === "admin") {
+
+        document
+            .getElementById(
+                "adminDashboard"
+            )
+            .classList.remove("hidden");
+
+
+        document.getElementById(
+            "headerRole"
+        ).innerText =
+            "ADMIN CONTROL CENTER";
+
+
+        loadAdminData();
+
+    }
+
+
+    else {
+
+        document
+            .getElementById(
+                "rescueDashboard"
+            )
+            .classList.remove("hidden");
+
+
+        document.getElementById(
+            "headerRole"
+        ).innerText =
+            "RESCUE OPERATIONS";
+
+
+        loadRescueData();
+
+    }
+
+
+    loadSession();
+
+}
+
+
+/* =========================================================
+   SESSION
+========================================================= */
+
+async function loadSession() {
+
+    const response =
+        await fetch("/session");
+
+    const data =
+        await response.json();
+
+
+    if (!data.logged_in) {
+
+        return;
+
+    }
+
+
+    document.getElementById(
+        "headerUser"
+    ).innerText =
+        data.name || "";
+
+}
+
+
+/* =========================================================
+   CITIZEN REQUEST
+========================================================= */
+
+async function submitRequest() {
+
+    const data = {
+
+        location:
+            document.getElementById(
+                "reqLocation"
+            ).value,
+
+        phone:
+            document.getElementById(
+                "reqPhone"
+            ).value,
+
+        people:
+            document.getElementById(
+                "reqPeople"
+            ).value,
+
+        flood_level:
+            document.getElementById(
+                "reqFlood"
+            ).value,
+
+        details:
+            document.getElementById(
+                "reqDetails"
+            ).value
+
+    };
+
+
+    const response =
+        await fetch(
+            "/create-request",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify(data)
+            }
+        );
+
+
+    const result =
+        await response.json();
+
+
+    const box =
+        document.getElementById(
+            "requestMessage"
+        );
+
+
+    if (result.success) {
+
+        box.className =
+            "message success";
+
+        box.innerText =
+            `Emergency request #${result.request_id}
+             submitted successfully.`;
+
+        document.getElementById(
+            "reqDetails"
+        ).value = "";
+
+
+        loadCitizenData();
+
+    }
+    else {
+
+        box.className =
+            "message error";
+
+        box.innerText =
+            result.message;
+
+    }
+
+}
+
+
+/* =========================================================
+   CITIZEN DATA
+========================================================= */
+
+async function loadCitizenData() {
+
+    await loadCitizenRequests();
+
+    await loadNotifications();
+
+}
+
+
+/* =========================================================
+   CITIZEN REQUEST LIST
+========================================================= */
+
+async function loadCitizenRequests() {
+
+    const response =
+        await fetch(
+            "/my-requests"
+        );
+
+
+    const data =
+        await response.json();
+
+
+    const box =
+        document.getElementById(
+            "citizenRequests"
+        );
+
+
+    if (!data.success) {
+
+        box.innerHTML =
+            "<p>Unable to load requests.</p>";
+
+        return;
+
+    }
+
+
+    if (data.requests.length === 0) {
+
+        box.innerHTML = `
+            <div class="empty">
+                No emergency requests yet.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    box.innerHTML =
+        data.requests
+            .map(request => `
+
+                <div class="request-card">
+
+                    <div class="request-top">
+
+                        <div>
+
+                            <div class="case-id">
+                                REQUEST #${request.id}
+                            </div>
+
+                            <h3>
+                                Emergency Request
+                            </h3>
+
+                        </div>
+
+                        <span class="status ${statusClass(request.status)}">
+                            ${request.status}
+                        </span>
+
+                    </div>
+
+
+                    <div class="info-grid">
+
+                        <div>
+                            <small>
+                                Location
+                            </small>
+
+                            <strong>
+                                📍 ${escapeHtml(
+                                    request.location
+                                )}
+                            </strong>
+                        </div>
+
+
+                        <div>
+                            <small>
+                                People
+                            </small>
+
+                            <strong>
+                                👥 ${request.people}
+                            </strong>
+                        </div>
+
+
+                        <div>
+                            <small>
+                                Flood Level
+                            </small>
+
+                            <strong>
+                                🌊 ${request.flood_level}
+                            </strong>
+                        </div>
+
+
+                        <div>
+                            <small>
+                                Priority
+                            </small>
+
+                            <strong>
+                                ${request.priority}
+                            </strong>
+                        </div>
+
+                    </div>
+
+
+                    <div class="assignment">
+
+                        <p>
+                            <span>
+                                Rescue Team
+                            </span>
+
+                            ${
+                                request.assigned_team
+                                || "Waiting for admin assignment"
+                            }
+                        </p>
+
+
+                        <p>
+                            <span>
+                                Shelter
+                            </span>
+
+                            ${
+                                request.shelter
+                                || "Not assigned yet"
+                            }
+                        </p>
+
+                    </div>
+
+                </div>
+
+            `)
+            .join("");
+
+}
+
+
+/* =========================================================
+   NOTIFICATIONS
+========================================================= */
+
+async function loadNotifications() {
+
+    const response =
+        await fetch(
+            "/notifications"
+        );
+
+
+    const data =
+        await response.json();
+
+
+    const box =
+        document.getElementById(
+            "citizenNotifications"
+        );
+
+
+    if (!data.success) {
+
+        return;
+
+    }
+
+
+    if (data.notifications.length === 0) {
+
+        box.innerHTML = `
+            <div class="empty small">
+                No notifications.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    box.innerHTML =
+        data.notifications
+            .map(item => `
+
+                <div class="notification">
+
+                    <strong>
+                        Smart Flood
+                    </strong>
+
+                    <p>
+                        ${escapeHtml(
+                            item.message
+                        )}
+                    </p>
+
+                    <small>
+                        ${item.created_at}
+                    </small>
+
+                </div>
+
+            `)
+            .join("");
+
+}
+
+
+/* =========================================================
+   ADMIN DATA
+========================================================= */
+
+async function loadAdminData() {
+
+    await loadAdminStats();
+
+    await loadAdminRequests();
+
+    await loadAdminTeams();
+
+    await loadAdminShelters();
+
+}
+
+
+/* =========================================================
+   ADMIN STATS
+========================================================= */
+
+async function loadAdminStats() {
+
+    const response =
+        await fetch(
+            "/admin/stats"
+        );
+
+
+    const data =
+        await response.json();
+
+
+    if (!data.success) {
+
+        return;
+
+    }
+
+
+    document.getElementById(
+        "statTotal"
+    ).innerText =
+        data.total;
+
+
+    document.getElementById(
+        "statPending"
+    ).innerText =
+        data.pending;
+
+
+    document.getElementById(
+        "statProgress"
+    ).innerText =
+        data.progress;
+
+
+    document.getElementById(
+        "statRescued"
+    ).innerText =
+        data.rescued;
+
+}
+
+
+/* =========================================================
+   ADMIN REQUESTS
+========================================================= */
+
+async function loadAdminRequests() {
+
+    const response =
+        await fetch(
+            "/admin/requests"
+        );
+
+
+    const data =
+        await response.json();
+
+
+    const box =
+        document.getElementById(
+            "adminRequests"
+        );
+
+
+    if (!data.success) {
+
+        box.innerHTML =
+            "<p>Unable to load cases.</p>";
+
+        return;
+
+    }
+
+
+    if (data.requests.length === 0) {
+
+        box.innerHTML = `
+            <div class="empty">
+                No emergency cases yet.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    box.innerHTML =
+        data.requests
+            .map(request => adminRequestCard(request))
+            .join("");
+
+}
+
+
+/* =========================================================
+   ADMIN REQUEST CARD
+========================================================= */
+
+function adminRequestCard(request) {
+
+    const pending =
+        request.status === "Pending";
+
+
+    return `
+
+        <div class="request-card admin-request">
+
+            <div class="request-top">
+
+                <div>
+
+                    <div class="case-id">
+                        EMERGENCY CASE #${request.id}
+                    </div>
+
+                    <h3>
+                        ${escapeHtml(
+                            request.citizen_name
+                        )}
+                    </h3>
+
+                </div>
+
+
+                <span
+                    class="priority
+                    ${priorityClass(
+                        request.priority
+                    )}"
+                >
+                    ${request.priority}
+                </span>
+
+            </div>
+
+
+            <div class="info-grid">
+
+                <div>
+
+                    <small>
+                        Location
+                    </small>
+
+                    <strong>
+                        📍 ${escapeHtml(
+                            request.location
+                        )}
+                    </strong>
+
+                </div>
+
+
+                <div>
+
+                    <small>
+                        People
+                    </small>
+
+                    <strong>
+                        👥 ${request.people}
+                    </strong>
+
+                </div>
+
+
+                <div>
+
+                    <small>
+                        Flood Level
+                    </small>
+
+                    <strong>
+                        🌊 Level ${request.flood_level}
+                    </strong>
+
+                </div>
+
+
+                <div>
+
+                    <small>
+                        Emergency Phone
+                    </small>
+
+                    <strong>
+                        ☎ ${escapeHtml(
+                            request.phone
+                        )}
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="details">
+
+                <strong>
+                    Details:
+                </strong>
+
+                <p>
+                    ${
+                        request.details
+                        ? escapeHtml(request.details)
+                        : "No additional details."
+                    }
+                </p>
+
+            </div>
+
+
+            <div class="assignment">
+
+                <p>
+
+                    <span>
+                        Rescue Team
+                    </span>
+
+                    ${
+                        request.assigned_team
+                        || "Not assigned"
+                    }
+
+                </p>
+
+
+                <p>
+
+                    <span>
+                        Shelter
+                    </span>
+
+                    ${
+                        request.shelter
+                        || "Not assigned"
+                    }
+
+                </p>
+
+
+                <p>
+
+                    <span>
+                        Status
+                    </span>
+
+                    <b>
+                        ${request.status}
+                    </b>
+
+                </p>
+
+            </div>
+
+
+            <div class="action-row">
+
+                ${
+                    pending
+
+                    ?
+
+                    `
+                    <button
+                        class="primary-btn"
+                        onclick="assignTeam(${request.id})"
+                    >
+                        ✓ Accept & Assign Rescue Team
+                    </button>
+                    `
+
+                    :
+
+                    ""
+                }
+
+
+                ${
+                    !request.shelter &&
+                    request.status !== "Cancelled"
+
+                    ?
+
+                    `
+                    <button
+                        class="secondary-btn"
+                        onclick="assignShelter(${request.id})"
+                    >
+                        🏠 Assign Shelter
+                    </button>
+                    `
+
+                    :
+
+                    ""
+                }
+
+
+                ${
+                    request.status !== "Rescued" &&
+                    request.status !== "Cancelled"
+
+                    ?
+
+                    `
+                    <button
+                        class="cancel-btn"
+                        onclick="cancelCase(${request.id})"
+                    >
+                        Cancel Case
+                    </button>
+                    `
+
+                    :
+
+                    ""
+                }
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+/* =========================================================
+   ADMIN ASSIGN TEAM
+========================================================= */
+
+async function assignTeam(id) {
+
+    if (
+        !confirm(
+            "Accept this emergency and assign the nearest available rescue team?"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    const response =
+        await fetch(
+            `/admin/assign-team/${id}`,
+            {
+                method: "POST"
+            }
+        );
+
+
+    const result =
+        await response.json();
+
+
+    if (result.success) {
+
+        alert(
+            `Case accepted.\n\nAssigned team: ${result.team}\n\nCitizen notification/SMS sent.`
+        );
+
+        loadAdminData();
+
+    }
+    else {
+
+        alert(
+            result.message
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   ADMIN ASSIGN SHELTER
+========================================================= */
+
+async function assignShelter(id) {
+
+    if (
+        !confirm(
+            "Assign the best available shelter?"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    const response =
+        await fetch(
+            `/admin/assign-shelter/${id}`,
+            {
+                method: "POST"
+            }
+        );
+
+
+    const result =
+        await response.json();
+
+
+    if (result.success) {
+
+        alert(
+            `Shelter assigned:\n${result.shelter}\n\nCitizen notification/SMS sent.`
+        );
+
+        loadAdminData();
+
+    }
+    else {
+
+        alert(
+            result.message
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   ADMIN CANCEL
+========================================================= */
+
+async function cancelCase(id) {
+
+    if (
+        !confirm(
+            "Cancel this emergency case?"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    const response =
+        await fetch(
+            `/admin/cancel/${id}`,
+            {
+                method: "POST"
+            }
+        );
+
+
+    const result =
+        await response.json();
+
+
+    if (result.success) {
+
+        loadAdminData();
+
+    }
+    else {
+
+        alert(
+            result.message
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   ADMIN TEAMS
+========================================================= */
+
+async function loadAdminTeams() {
+
+    const response =
+        await fetch(
+            "/admin/teams"
+        );
+
+
+    const data =
+        await response.json();
+
+
+    const box =
+        document.getElementById(
+            "adminTeams"
+        );
+
+
+    if (!data.success) {
+
+        return;
+
+    }
+
+
+    box.innerHTML =
+        data.teams
+            .map(team => `
+
+                <div class="mini-card">
+
+                    <h3>
+                        🚑 ${escapeHtml(
+                            team.team_name
+                        )}
+                    </h3>
+
+                    <p>
+                        📍 ${escapeHtml(
+                            team.location
+                        )}
+                    </p>
+
+                    <span class="
+                        status
+                        ${
+                            team.status === "Available"
+                            ? "status-rescued"
+                            : "status-pending"
+                        }
+                    ">
+                        ${team.status}
+                    </span>
+
+                </div>
+
+            `)
+            .join("");
+
+}
+
+
+/* =========================================================
+   ADMIN SHELTERS
+========================================================= */
+
+async function loadAdminShelters() {
+
+    const response =
+        await fetch(
+            "/admin/shelters"
+        );
+
+
+    const data =
+        await response.json();
+
+
+    const box =
+        document.getElementById(
+            "adminShelters"
+        );
+
+
+    if (!data.success) {
+
+        return;
+
+    }
+
+
+    box.innerHTML =
+        data.shelters
+            .map(shelter => `
+
+                <div class="mini-card">
+
+                    <h3>
+                        🏠 ${escapeHtml(
+                            shelter.name
+                        )}
+                    </h3>
+
+                    <p>
+                        📍 ${escapeHtml(
+                            shelter.location
+                        )}
+                    </p>
+
+                    <strong>
+                        Available:
+                        ${shelter.available}
+                        /
+                        ${shelter.capacity}
+                    </strong>
+
+                </div>
+
+            `)
+            .join("");
+
+}
+
+
+/* =========================================================
+   RESCUE DATA
+========================================================= */
+
+async function loadRescueData() {
+
+    const response =
+        await fetch(
+            "/rescue/requests"
+        );
+
+
+    const data =
+        await response.json();
+
+
+    const box =
+        document.getElementById(
+            "rescueRequests"
+        );
+
+
+    if (!data.success) {
+
+        box.innerHTML =
+            "<p>Unable to load assigned cases.</p>";
+
+        return;
+
+    }
+
+
+    if (data.requests.length === 0) {
+
+        box.innerHTML = `
+            <div class="empty">
+                No cases assigned to your team.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    box.innerHTML =
+        data.requests
+            .map(request => `
+
+                <div class="request-card">
+
+                    <div class="request-top">
+
+                        <div>
+
+                            <div class="case-id">
+                                CASE #${request.id}
+                            </div>
+
+                            <h3>
+                                ${escapeHtml(
+                                    request.citizen_name
+                                )}
+                            </h3>
+
+                        </div>
+
+                        <span class="status ${statusClass(request.status)}">
+                            ${request.status}
+                        </span>
+
+                    </div>
+
+
+                    <div class="info-grid">
+
+                        <div>
+
+                            <small>
+                                Location
+                            </small>
+
+                            <strong>
+                                📍 ${escapeHtml(
+                                    request.location
+                                )}
+                            </strong>
+
+                        </div>
+
+
+                        <div>
+
+                            <small>
+                                People
+                            </small>
+
+                            <strong>
+                                👥 ${request.people}
+                            </strong>
+
+                        </div>
+
+
+                        <div>
+
+                            <small>
+                                Flood Level
+                            </small>
+
+                            <strong>
+                                🌊 ${request.flood_level}
+                            </strong>
+
+                        </div>
+
+
+                        <div>
+
+                            <small>
+                                Phone
+                            </small>
+
+                            <strong>
+                                ☎ ${escapeHtml(
+                                    request.phone
+                                )}
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="assignment">
+
+                        <p>
+
+                            <span>
+                                Shelter
+                            </span>
+
+                            ${
+                                request.shelter
+                                || "Not assigned"
+                            }
+
+                        </p>
+
+                    </div>
+
+
+                    <div class="action-row">
+
+                        ${
+                            request.status === "Assigned"
+
+                            ?
+
+                            `
+                            <button
+                                class="primary-btn"
+                                onclick="updateRescue(
+                                    ${request.id},
+                                    'In Progress'
+                                )"
+                            >
+                                🚑 Start Rescue
+                            </button>
+                            `
+
+                            :
+
+                            ""
+                        }
+
+
+                        ${
+                            request.status === "In Progress"
+
+                            ?
+
+                            `
+                            <button
+                                class="success-btn"
+                                onclick="updateRescue(
+                                    ${request.id},
+                                    'Rescued'
+                                )"
+                            >
+                                ✓ Mark Rescued
+                            </button>
+                            `
+
+                            :
+
+                            ""
+                        }
+
+                    </div>
+
+                </div>
+
+            `)
+            .join("");
+
+}
+
+
+/* =========================================================
+   RESCUE UPDATE
+========================================================= */
+
+async function updateRescue(
+    id,
+    status
+) {
+
+    const response =
+        await fetch(
+            `/rescue/update/${id}`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    status: status
+                })
+            }
+        );
+
+
+    const result =
+        await response.json();
+
+
+    if (result.success) {
+
+        alert(
+            result.message
+        );
+
+        loadRescueData();
+
+    }
+    else {
+
+        alert(
+            result.message
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+async function logout() {
+
+    await fetch(
+        "/logout",
+        {
+            method: "POST"
+        }
+    );
+
+    location.reload();
+
+}
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function statusClass(status) {
+
+    if (status === "Pending")
+        return "status-pending";
+
+    if (status === "Assigned")
+        return "status-assigned";
+
+    if (status === "In Progress")
+        return "status-progress";
+
+    if (status === "Rescued")
+        return "status-rescued";
+
+    return "status-cancelled";
+
+}
+
+
+function priorityClass(priority) {
+
+    if (priority === "Critical")
+        return "priority-critical";
+
+    if (priority === "High")
+        return "priority-high";
+
+    if (priority === "Medium")
+        return "priority-medium";
+
+    return "priority-low";
+
+}
+
+
+function escapeHtml(value) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return "";
+    }
+
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+}
+
+
+/* =========================================================
+   CHECK EXISTING LOGIN
+========================================================= */
+
+async function checkExistingSession() {
+
+    try {
+
+        const response =
+            await fetch("/session");
+
+        const data =
+            await response.json();
+
+        if (data.logged_in) {
+
+            openDashboard(
+                data.role
+            );
+
+        }
+
+    }
+    catch(error) {
+
+        console.log(error);
+
+    }
+
+}
+
+
+checkExistingSession();
+
+
+/* =========================================================
+   AUTO REFRESH
+========================================================= */
+
+setInterval(
+    async () => {
+
+        const response =
+            await fetch("/session");
+
+        const data =
+            await response.json();
+
+        if (!data.logged_in) {
+            return;
+        }
+
+        if (data.role === "citizen") {
+
+            loadCitizenData();
+
+        }
+
+        else if (data.role === "admin") {
+
+            loadAdminData();
+
+        }
+
+        else if (data.role === "rescue") {
+
+            loadRescueData();
+
+        }
+
+    },
+    10000
+);
+// ==========================================
+// LIVE WEATHER MONITORING
+// ==========================================
+
+async function loadLiveWeather(force = false) {
+    const cityInput = document.getElementById("weatherCity");
+    const city = cityInput ? cityInput.value.trim() : "Coimbatore";
+
+    const message = document.getElementById("weatherMessage");
+
+    if (!city) {
+        if (message) {
+            message.textContent = "Please enter a city name.";
+        }
+        return;
+    }
+
+    if (message) {
+        message.textContent = "Loading live weather...";
+    }
+
+    try {
+        const response = await fetch(
+            `/api/weather?city=${encodeURIComponent(city)}`,
+            { cache: "no-store" }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || data.message || "Unable to fetch weather.");
+        }
+
+        console.log("Weather API response:", data);
+
+        // Update weather values using the API response.
+        const current = data.current || data;
+
+        const temperature =
+            current.temperature_c ??
+            current.temperature ??
+            current.temperature_2m;
+
+        const humidity =
+            current.humidity_percent ??
+            current.humidity ??
+            current.relative_humidity_2m;
+
+        const wind =
+            current.wind_speed_kmh ??
+            current.wind_speed ??
+            current.wind_speed_10m;
+
+        const rainfall =
+            current.precipitation_mm ??
+            current.rainfall ??
+            current.precipitation;
+
+        const setValue = (id, value, unit = "") => {
+            const element = document.getElementById(id);
+
+            if (element) {
+                element.textContent =
+                    value !== undefined && value !== null
+                        ? `${value}${unit}`
+                        : "Unavailable";
+            }
+        };
+
+        setValue("weatherTemperature", temperature, " °C");
+        setValue("weatherHumidity", humidity, " %");
+        setValue("weatherWind", wind, " km/h");
+        setValue("weatherRain", rainfall, " mm");
+
+        // Display the hourly rainfall forecast if available.
+        const hourlyElement = document.getElementById("weatherHourly");
+
+        if (hourlyElement) {
+            const hourly = data.hourly_forecast;
+
+            if (hourly && hourly.time && hourly.precipitation) {
+                hourlyElement.innerHTML = `
+                    <div style="overflow-x:auto">
+                        <table style="width:100%;border-collapse:collapse">
+                            <thead>
+                                <tr>
+                                    <th style="padding:10px;text-align:left">Time</th>
+                                    <th style="padding:10px;text-align:left">Rainfall (mm)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${hourly.time.slice(0, 12).map((time, index) => `
+                                    <tr>
+                                        <td style="padding:10px">
+                                            ${time}
+                                        </td>
+                                        <td style="padding:10px">
+                                            ${hourly.precipitation[index] ?? "—"}
+                                        </td>
+                                    </tr>
+                                `).join("")}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                hourlyElement.textContent =
+                    "Hourly rainfall forecast is unavailable.";
+            }
+        }
+
+        const updatedAt = document.getElementById("weatherUpdatedAt");
+        if (updatedAt) {
+            const apiTime = data.weather_time || data.current?.time;
+            updatedAt.textContent = apiTime
+                ? `Weather updated successfully for ${city}. Data time: ${apiTime}. Source: ${data.data_source || "Weather API"}.`
+                : `Weather updated successfully for ${city} at ${new Date().toLocaleTimeString()}.`;
+        }
+
+        if (message) {
+            message.textContent =
+                `Weather updated successfully for ${city}.`;
+            message.className = "message success";
+        }
+
+    } catch (error) {
+        console.error("Weather loading error:", error);
+
+        if (message) {
+            message.textContent =
+                `Could not load weather: ${error.message}`;
+            message.className = "message error";
+        }
+    }
+}
+
+
+// Refresh the citizen weather panel every 10 minutes while the dashboard is open.
+setInterval(() => {
+    const appElement = document.getElementById("app");
+    const citizenDashboard = document.getElementById("citizenDashboard");
+    if (
+        appElement && !appElement.classList.contains("hidden") &&
+        citizenDashboard && !citizenDashboard.classList.contains("hidden")
+    ) {
+        loadLiveWeather();
+    }
+}, 10 * 60 * 1000);
+
+</script>
+
+
+</body>
+</html>

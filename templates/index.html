@@ -1,0 +1,2913 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Flood Evacuation & Rescue System - Advanced Edition</title>
+
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Application Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Chart.js & Leaflet JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+
+<body>
+
+<!-- =====================================================
+     LOGIN SCREEN
+===================================================== -->
+<div id="loginScreen">
+    <div class="login-card">
+        <div class="logo">🛡️</div>
+        <h1>Smart Flood</h1>
+        <p class="subtitle">Evacuation & Rescue System — Advanced Edition</p>
+
+        <!-- ROLE SELECT -->
+        <div class="role-buttons">
+            <button onclick="selectRole('citizen')" id="citizenRoleBtn" class="role-btn active">
+                Citizen
+            </button>
+            <button onclick="selectRole('admin')" id="adminRoleBtn" class="role-btn">
+                Admin
+            </button>
+            <button onclick="selectRole('rescue')" id="rescueRoleBtn" class="role-btn">
+                Rescue Team
+            </button>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div id="loginForm">
+            <label for="loginUsername">Username</label>
+            <input id="loginUsername" type="text" placeholder="Enter username" autocomplete="username">
+
+            <label for="loginPassword">Password</label>
+            <input id="loginPassword" type="password" placeholder="Enter password" autocomplete="current-password">
+
+            <button class="primary-btn full" onclick="login()">
+                Login
+            </button>
+
+            <button id="registerLink" class="text-btn" onclick="showRegister()">
+                New citizen? Create account
+            </button>
+        </div>
+
+        <!-- REGISTER FORM -->
+        <div id="registerForm" class="hidden">
+            <h2>Create Citizen Account</h2>
+
+            <label for="regName">Full Name</label>
+            <input id="regName" type="text" placeholder="Your full name">
+
+            <label for="regUsername">Username</label>
+            <input id="regUsername" type="text" placeholder="Choose a username">
+
+            <label for="regPassword">Password</label>
+            <input id="regPassword" type="password" placeholder="At least 6 characters">
+
+            <label for="regPhone">Phone Number</label>
+            <input id="regPhone" type="text" placeholder="10-digit mobile number">
+
+            <label for="regLocation">Home Location</label>
+            <input id="regLocation" type="text" placeholder="Example: Gandhipuram, Coimbatore">
+
+            <button class="primary-btn full" onclick="registerCitizen()">
+                Create Account
+            </button>
+
+            <button class="text-btn" onclick="showLogin()">
+                Back to Login
+            </button>
+        </div>
+
+        <div id="loginMessage" class="message"></div>
+    </div>
+</div>
+
+
+<!-- =====================================================
+     MAIN APPLICATION SHELL
+===================================================== -->
+<div id="app" class="hidden">
+
+    <header>
+        <div class="brand">
+            <div class="brand-icon">🛡️</div>
+            <div>
+                <h2>Smart Flood</h2>
+                <span id="headerRole">EVACUATION & RESCUE PLATFORM</span>
+            </div>
+        </div>
+
+        <div class="header-right">
+            <span id="headerUser"></span>
+            <button onclick="logout()" class="logout-btn">Logout</button>
+        </div>
+    </header>
+
+    <!-- =====================================================
+         CITIZEN DASHBOARD
+    ===================================================== -->
+    <section id="citizenDashboard" class="dashboard hidden">
+        <div class="hero">
+            <div class="eyebrow">CITIZEN SAFETY PORTAL</div>
+            <h1>Stay safe, stay connected.</h1>
+            <p>Report emergencies with GPS precision, find guaranteed shelters, and track real-time rescue operations.</p>
+        </div>
+
+        <!-- Citizen Sub-navigation Tabs -->
+        <div class="dash-tabs">
+            <button class="tab-btn active" onclick="switchCitizenTab('report')">🚨 Report Emergency</button>
+            <button class="tab-btn" onclick="switchCitizenTab('requests')">📋 My Requests</button>
+            <button class="tab-btn" onclick="switchCitizenTab('map')">🗺️ Interactive Map & Shelters</button>
+            <button class="tab-btn" onclick="switchCitizenTab('weather')">🌦️ Weather Telemetry</button>
+            <button class="tab-btn" onclick="switchCitizenTab('notifs')">🔔 Notifications</button>
+        </div>
+
+        <!-- TAB 1: REPORT EMERGENCY -->
+        <div id="citizenTabReport" class="citizen-tab-pane">
+            <div class="section">
+                <div class="section-title">
+                    <h2>Report Flood Emergency</h2>
+                    <p>Submit your situation for intelligent triage. Urgent medical needs receive immediate priority escalation.</p>
+                </div>
+
+                <!-- GPS Location Detector Component -->
+                <div class="gps-detect-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <div>
+                            <strong>📍 GPS Coordinates Detection</strong>
+                            <span id="gpsStatusBadge" class="gps-status searching">Not Acquired</span>
+                        </div>
+                        <button type="button" class="gps-btn" onclick="detectCitizenLocation()">
+                            📡 Detect My Current Location
+                        </button>
+                    </div>
+                    <div id="gpsCoordsDisplay" class="gps-coords-display">
+                        <span>Click the button above to include verified GPS coordinates from your browser.</span>
+                    </div>
+                    <div id="reportGpsMiniMap" style="height:220px; border-radius:10px; margin-top:12px; display:none; border:1px solid #1e4a77;"></div>
+                    <!-- Hidden inputs for coordinates -->
+                    <input type="hidden" id="reqLatitude">
+                    <input type="hidden" id="reqLongitude">
+                    <input type="hidden" id="reqAccuracy">
+                </div>
+
+                <div class="form-grid">
+                    <div style="position:relative;">
+                        <label for="reqLocation">Street Address / Landmark *</label>
+                        <input id="reqLocation" type="text" placeholder="Type city, area, or address (e.g., T Nagar, Chennai or Gandhipuram)" oninput="handleLocationSearchInput(this.value)" autocomplete="off">
+                        <div id="locationSearchResults" class="location-autocomplete-dropdown hidden"></div>
+                    </div>
+
+                    <div>
+                        <label for="reqPhone">Emergency Contact Phone *</label>
+                        <input id="reqPhone" type="text" placeholder="10-digit emergency phone">
+                    </div>
+
+                    <div>
+                        <label for="reqPeople">Total People Affected *</label>
+                        <input id="reqPeople" type="number" min="1" value="1">
+                    </div>
+
+                    <div>
+                        <label for="reqFlood">Observed Flood Severity *</label>
+                        <select id="reqFlood">
+                            <option value="1">Level 1 - Ankle deep (Drains overflowing)</option>
+                            <option value="2">Level 2 - Knee deep (Road waterlogged)</option>
+                            <option value="3">Level 3 - Waist deep (Vehicles stalled)</option>
+                            <option value="4">Level 4 - Chest deep (Ground floors submerged)</option>
+                            <option value="5">Level 5 - Critical (Roof escape / Rapid current)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Vulnerable Population Assessment Panel -->
+                <div class="vuln-panel">
+                    <div class="vuln-panel-title">
+                        ⚠️ Vulnerable Individuals & Special Assistance (Assists Priority Triage)
+                    </div>
+
+                    <div class="medical-urgent-toggle">
+                        <input type="checkbox" id="reqMedicalUrgent">
+                        <label for="reqMedicalUrgent" class="medical-urgent-label">
+                            🚨 URGENT MEDICAL EMERGENCY: Individual requires critical medical care, oxygen, dialysis, or immediate trauma assistance.
+                        </label>
+                    </div>
+
+                    <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
+                        <div>
+                            <label for="reqElderly">Elderly Persons (60+ yrs)</label>
+                            <input id="reqElderly" type="number" min="0" value="0">
+                        </div>
+                        <div>
+                            <label for="reqChildren">Children / Infants (&lt;12 yrs)</label>
+                            <input id="reqChildren" type="number" min="0" value="0">
+                        </div>
+                        <div>
+                            <label for="reqDisability">Mobility Impaired / Disabled</label>
+                            <input id="reqDisability" type="number" min="0" value="0">
+                        </div>
+                    </div>
+
+                    <label for="reqAssistanceNotes" style="margin-top:12px;">Specific Medical / Mobility Needs</label>
+                    <textarea id="reqAssistanceNotes" rows="2" placeholder="Describe medical condition, wheelchair needs, prescription medication, etc."></textarea>
+                </div>
+
+                <label for="reqDetails">General Emergency Situation & Surroundings</label>
+                <textarea id="reqDetails" rows="3" placeholder="Describe building floor, landmarks, nearby electrical poles, water inflow rate..."></textarea>
+
+                <button class="danger-btn full" onclick="submitRequest()" style="font-size:16px; padding:14px;">
+                    🚨 Submit Emergency Request for Dispatch
+                </button>
+
+                <div id="requestMessage" class="message"></div>
+            </div>
+        </div>
+
+        <!-- TAB 2: MY REQUESTS -->
+        <div id="citizenTabRequests" class="citizen-tab-pane hidden">
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>My Emergency Cases</h2>
+                        <p>Track live operational status, triage scores, assigned rescue fleets, and shelter destinations.</p>
+                    </div>
+                    <button class="secondary-btn" onclick="loadCitizenData()">↻ Refresh Cases</button>
+                </div>
+                <div id="citizenRequests"></div>
+            </div>
+        </div>
+
+        <!-- TAB 3: INTERACTIVE MAP & SHELTERS -->
+        <div id="citizenTabMap" class="citizen-tab-pane hidden">
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>Safe Evacuation Shelters & Flood Map</h2>
+                        <p>Locate operational high-ground shelters, check capacity, and visualize safe evacuation routes.</p>
+                    </div>
+                    <button class="secondary-btn" onclick="refreshInteractiveMap()">↻ Refresh Map</button>
+                </div>
+
+                <div class="map-panel">
+                    <div class="map-controls">
+                        <div class="map-legend">
+                            <span class="legend-item"><span class="legend-dot critical"></span> Critical</span>
+                            <span class="legend-item"><span class="legend-dot high"></span> High</span>
+                            <span class="legend-item"><span class="legend-dot medium"></span> Medium</span>
+                            <span class="legend-item"><span class="legend-dot low"></span> Low</span>
+                            <span class="legend-item"><span class="legend-dot shelter"></span> Shelters</span>
+                            <span class="legend-item"><span class="legend-dot hazard"></span> Road Hazard</span>
+                        </div>
+                    </div>
+                    <div id="citizenFloodMap" style="height:480px; width:100%; border-radius:14px; border:1px solid #1c456f;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: WEATHER TELEMETRY -->
+        <div id="citizenTabWeather" class="citizen-tab-pane hidden">
+            <div class="section" id="citizenWeatherSection">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>🌦️ Live Meteorological Telemetry</h2>
+                        <p>Real-time Open-Meteo precipitation, atmospheric humidity, and rainfall forecast.</p>
+                    </div>
+                    <button class="secondary-btn" type="button" onclick="loadLiveWeather(true)">↻ Refresh</button>
+                </div>
+
+                <div class="form-grid">
+                    <div>
+                        <label for="weatherCity">Location / Region</label>
+                        <input id="weatherCity" type="text" value="Coimbatore" placeholder="Enter city name">
+                    </div>
+                    <div style="display:flex; align-items:flex-end;">
+                        <button class="primary-btn" type="button" onclick="loadLiveWeather(true)">Get Telemetry</button>
+                    </div>
+                </div>
+
+                <div id="weatherMessage" class="message">Loading meteorological telemetry...</div>
+
+                <div id="weatherCards" class="card-grid">
+                    <div class="mini-card">
+                        <h3>🌡️ Temperature</h3>
+                        <strong id="weatherTemperature">—</strong>
+                    </div>
+                    <div class="mini-card">
+                        <h3>💧 Relative Humidity</h3>
+                        <strong id="weatherHumidity">—</strong>
+                    </div>
+                    <div class="mini-card">
+                        <h3>💨 Wind Velocity</h3>
+                        <strong id="weatherWind">—</strong>
+                    </div>
+                    <div class="mini-card">
+                        <h3>🌧️ Current Rainfall</h3>
+                        <strong id="weatherRain">—</strong>
+                    </div>
+                </div>
+
+                <div class="card-grid" style="margin-top:20px;">
+                    <div class="mini-card" style="grid-column: 1 / -1;">
+                        <h3>📊 Hourly Rainfall Forecast (Next 12 Hours)</h3>
+                        <div id="weatherHourly" style="margin-top:12px;"></div>
+                        <small id="weatherUpdatedAt" style="display:block; margin-top:10px; color:#8da4bf;"></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: NOTIFICATIONS -->
+        <div id="citizenTabNotifs" class="citizen-tab-pane hidden">
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>Operational Notifications</h2>
+                        <p>Dispatch updates, rescue deployments, and shelter allocation confirmations.</p>
+                    </div>
+                    <button class="secondary-btn" onclick="markAllNotificationsRead()">✓ Mark All Read</button>
+                </div>
+                <div id="citizenNotifications"></div>
+            </div>
+        </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         ADMIN DASHBOARD
+    ===================================================== -->
+    <section id="adminDashboard" class="dashboard hidden">
+        <div class="hero">
+            <div class="eyebrow">EMERGENCY OPERATIONS CENTER (EOC)</div>
+            <h1>Disaster Command & Coordination</h1>
+            <p>Intelligent priority triage, active GIS tracking, capacity-enforced shelters, and flood risk intelligence.</p>
+        </div>
+
+        <!-- Admin Sub-navigation Tabs -->
+        <div class="dash-tabs">
+            <button class="tab-btn active" onclick="switchAdminTab('overview')">📊 Overview & Stats</button>
+            <button class="tab-btn" onclick="switchAdminTab('map')">🗺️ Interactive GIS Map</button>
+            <button class="tab-btn" onclick="switchAdminTab('cases')">🚨 Emergency Cases & Triage</button>
+            <button class="tab-btn" onclick="switchAdminTab('teams')">🚒 Rescue Fleets</button>
+            <button class="tab-btn" onclick="switchAdminTab('shelters')">🏠 Shelter Management</button>
+            <button class="tab-btn" onclick="switchAdminTab('analytics')">📈 Flood Risk & Analytics</button>
+        </div>
+
+        <!-- TAB 1: OVERVIEW & QUICK METRICS -->
+        <div id="adminTabOverview" class="admin-tab-pane">
+            <div class="stats">
+                <div class="stat-card">
+                    <strong id="statTotal">0</strong>
+                    <span>Total Emergencies</span>
+                </div>
+                <div class="stat-card">
+                    <strong id="statPending" style="color:#f59e0b;">0</strong>
+                    <span>Pending Review</span>
+                </div>
+                <div class="stat-card">
+                    <strong id="statProgress" style="color:#38bdf8;">0</strong>
+                    <span>Active Rescues</span>
+                </div>
+                <div class="stat-card">
+                    <strong id="statRescued" style="color:#22c55e;">0</strong>
+                    <span>Evacuees Secured</span>
+                </div>
+                <div class="stat-card">
+                    <strong id="statAvailableTeams" style="color:#a855f7;">0</strong>
+                    <span>Available Fleets</span>
+                </div>
+            </div>
+
+            <!-- Environmental Flood Risk Assessment Widget -->
+            <div id="adminRiskWidget" class="risk-card">
+                <div class="risk-header">
+                    <div>
+                        <h2 style="font-size:18px; color:#93c5fd; margin:0 0 4px 0;">🌊 Environmental Flood Risk Telemetry</h2>
+                        <span id="riskLocationLabel" style="font-size:12px; color:#94a3b8;">Location: Dynamic Region Telemetry</span>
+                        <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+                            <input id="riskLocationInput" type="text" placeholder="Assess any city (e.g. Chennai, Bengaluru, Coimbatore)..." style="font-size:12px; padding:5px 8px; width:260px; background:#061628; border:1px solid #1c426b; color:#fff; border-radius:6px;" onkeydown="if(event.key==='Enter') loadFloodRiskAssessment(this.value)">
+                            <button type="button" class="secondary-btn" style="padding:5px 10px; font-size:12px;" onclick="loadFloodRiskAssessment(document.getElementById('riskLocationInput').value)">Assess City</button>
+                        </div>
+                    </div>
+                    <div id="riskCategoryBadge" class="risk-badge low">Analyzing...</div>
+                </div>
+
+                <div class="risk-meter">
+                    <div id="riskMeterFill" class="risk-meter-fill" style="width: 20%; background:#22c55e;"></div>
+                </div>
+
+                <p id="riskRecommendationText" style="font-size:13px; color:#e2edfa; margin-bottom:12px;"></p>
+
+                <div class="risk-factors-grid" id="riskFactorsGrid"></div>
+                <small id="riskDataCompleteness" style="display:block; margin-top:14px; color:#64748b; font-size:11px;"></small>
+            </div>
+        </div>
+
+        <!-- TAB 2: INTERACTIVE GIS MAP -->
+        <div id="adminTabMap" class="admin-tab-pane hidden">
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>Interactive Flood GIS Command Map</h2>
+                        <p>Real-time spatial visualization of emergency cases, rescue units, shelters, and impassable roads.</p>
+                    </div>
+                    <button class="secondary-btn" onclick="refreshInteractiveMap()">↻ Refresh Telemetry</button>
+                </div>
+
+                <div class="map-panel">
+                    <div class="map-controls">
+                        <div class="map-filters">
+                            <label style="font-size:12px; color:#94a3b8;">Priority:</label>
+                            <select id="mapFilterPriority" onchange="applyMapFilters()">
+                                <option value="all">All Priorities</option>
+                                <option value="Critical">Critical</option>
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+
+                            <label style="font-size:12px; color:#94a3b8; margin-left:8px;">Status:</label>
+                            <select id="mapFilterStatus" onchange="applyMapFilters()">
+                                <option value="all">All Statuses</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Assigned">Assigned</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Rescued">Rescued</option>
+                            </select>
+
+                            <input id="mapFilterSearch" type="text" placeholder="Search location / landmark..." oninput="applyMapFilters()">
+                        </div>
+
+                        <div class="map-legend">
+                            <span class="legend-item"><span class="legend-dot critical"></span> Critical</span>
+                            <span class="legend-item"><span class="legend-dot high"></span> High</span>
+                            <span class="legend-item"><span class="legend-dot medium"></span> Medium</span>
+                            <span class="legend-item"><span class="legend-dot low"></span> Low</span>
+                            <span class="legend-item"><span class="legend-dot team"></span> Rescue Team</span>
+                            <span class="legend-item"><span class="legend-dot shelter"></span> Shelter</span>
+                            <span class="legend-item"><span class="legend-dot hazard"></span> Road Hazard</span>
+                        </div>
+                    </div>
+
+                    <div id="floodMap"></div>
+
+                    <!-- Unmapped Requests Tray (Honest data preservation) -->
+                    <div id="unmappedTray" class="unmapped-box">
+                        <div class="unmapped-title">
+                            ⚠️ Unmapped Emergency Cases (No verified GPS coordinates)
+                        </div>
+                        <div id="unmappedChips" class="unmapped-chips">
+                            <span>Scanning requests...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: EMERGENCY CASES & TRIAGE -->
+        <div id="adminTabCases" class="admin-tab-pane hidden">
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>Triage Queue & Operations</h2>
+                        <p>Cases automatically ranked by multi-variable triage score and wait-time escalation.</p>
+                    </div>
+                    <button class="secondary-btn" onclick="loadAdminData()">↻ Refresh Queue</button>
+                </div>
+                <div id="adminRequests"></div>
+            </div>
+        </div>
+
+        <!-- TAB 4: RESCUE FLEETS -->
+        <div id="adminTabTeams" class="admin-tab-pane hidden">
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>Rescue Fleets & Telemetry</h2>
+                        <p>Operational status and GPS positioning for active field response squads.</p>
+                    </div>
+                    <button class="secondary-btn" onclick="loadAdminTeams()">↻ Refresh Fleets</button>
+                </div>
+                <div id="adminTeams" class="card-grid"></div>
+            </div>
+        </div>
+
+        <!-- TAB 5: SHELTER MANAGEMENT -->
+        <div id="adminTabShelters" class="admin-tab-pane hidden">
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>Evacuation Shelter Capacities</h2>
+                        <p>Real-time occupancy auditing. Allocation logic automatically enforces non-exceedance limits.</p>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="primary-btn" onclick="openDiscoverSheltersModal()">🔍 Discover Potential Shelters (OSM)</button>
+                        <button class="secondary-btn" onclick="loadAdminShelters()">↻ Refresh Shelters</button>
+                    </div>
+                </div>
+                <div id="adminShelters" class="card-grid"></div>
+            </div>
+        </div>
+
+        <!-- TAB 6: FLOOD RISK & ANALYTICS -->
+        <div id="adminTabAnalytics" class="admin-tab-pane hidden">
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>Disaster Telemetry & Analytics Engine</h2>
+                        <p>Authentic real-time visualizations computed directly from active database records.</p>
+                    </div>
+                    <button class="secondary-btn" onclick="loadAnalyticsCharts()">↻ Refresh Analytics</button>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>🌧️ Open-Meteo Hourly Rainfall Forecast</h3>
+                        <p>Projected precipitation trends over the next 12 hours</p>
+                        <div class="chart-container">
+                            <canvas id="chartRainfallCanvas"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3>🚨 Emergency Requests by Triage Priority</h3>
+                        <p>Distribution of active cases categorized by severity</p>
+                        <div class="chart-container">
+                            <canvas id="chartPriorityCanvas"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3>📈 Operational Pipeline Status</h3>
+                        <p>Cases categorized across response lifecycle stages</p>
+                        <div class="chart-container">
+                            <canvas id="chartStatusCanvas"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3>🏠 Shelter Capacity Utilization</h3>
+                        <p>Occupied spaces vs available capacity across designated centers</p>
+                        <div class="chart-container">
+                            <canvas id="chartSheltersCanvas"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card" style="grid-column: 1 / -1;">
+                        <h3>📅 Emergency Influx Timeline</h3>
+                        <p>Daily volume of emergency requests registered in the platform</p>
+                        <div class="chart-container">
+                            <canvas id="chartTimelineCanvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         RESCUE TEAM DASHBOARD
+    ===================================================== -->
+    <section id="rescueDashboard" class="dashboard hidden">
+        <div class="hero">
+            <div class="eyebrow">RESCUE SQUAD OPERATIONS</div>
+            <h1>Active Mission Command</h1>
+            <p>Field intelligence for your assigned squad. Access citizen situational details and route planning.</p>
+        </div>
+
+        <div class="dash-tabs">
+            <button class="tab-btn active" onclick="switchRescueTab('missions')">🚑 Assigned Missions</button>
+            <button class="tab-btn" onclick="switchRescueTab('beacon')">📡 GPS Beacon & Position</button>
+        </div>
+
+        <div id="rescueTabMissions" class="rescue-tab-pane">
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>My Assigned Operations</h2>
+                        <p>Field missions under your unit's direct responsibility.</p>
+                    </div>
+                    <button class="secondary-btn" onclick="loadRescueData()">↻ Refresh Missions</button>
+                </div>
+                <div id="rescueRequests"></div>
+            </div>
+        </div>
+
+        <div id="rescueTabBeacon" class="rescue-tab-pane hidden">
+            <div class="section">
+                <div class="section-title">
+                    <h2>Broadcast Rescue Vehicle GPS Position</h2>
+                    <p>Transmit your mobile team's current coordinates to Central Command.</p>
+                </div>
+
+                <div class="gps-detect-card">
+                    <p style="margin-bottom:12px; color:#cbd5e1; font-size:13.5px;">
+                        Activating this telemetry beacon sends your verified device coordinates to the centralized EOC map.
+                    </p>
+                    <button type="button" class="gps-btn" onclick="updateRescueTeamGPS()">
+                        📡 Transmit My Team's Live Location
+                    </button>
+                    <span id="rescueGpsStatus" class="gps-status searching" style="margin-left:12px;">Beacon Standby</span>
+                    <div id="rescueCoordsDisplay" class="gps-coords-display" style="margin-top:12px;"></div>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+</div>
+
+
+<!-- =====================================================
+     SAFE EVACUATION ROUTE MODAL
+===================================================== -->
+<div id="routeModal" class="modal-overlay hidden">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 id="routeModalTitle">🗺️ Safe Evacuation Route Planner</h3>
+            <button type="button" class="close-btn" onclick="closeRouteModal()">&times;</button>
+        </div>
+
+        <div class="route-stat-box">
+            <div class="route-stat-item">
+                <small>Road Distance</small>
+                <strong id="routeDistDisplay">— km</strong>
+            </div>
+            <div class="route-stat-item">
+                <small>Est. Travel Time</small>
+                <strong id="routeTimeDisplay">— mins</strong>
+            </div>
+            <div class="route-stat-item">
+                <small>Routing Engine</small>
+                <strong id="routeEngineDisplay" style="font-size:13px;">Dijkstra / OSRM</strong>
+            </div>
+        </div>
+
+        <div id="routeDestinationDetails" style="margin:10px 0; font-size:13px; color:#e2edfa;"></div>
+
+        <div id="routeHazardWarnings" class="hazard-warning-box">
+            <strong>⚠️ Route Safety Notice:</strong>
+            <ul id="routeWarningsList"></ul>
+        </div>
+
+        <div id="routeModalMap" style="height:320px; width:100%; border-radius:12px; border:1px solid #1e4570; margin-top:14px;"></div>
+
+        <div style="text-align:right; margin-top:18px;">
+            <button class="primary-btn" onclick="closeRouteModal()">Close Planner</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- =====================================================
+     DYNAMIC SHELTER DISCOVERY MODAL (OpenStreetMap)
+===================================================== -->
+<div id="discoverSheltersModal" class="modal-overlay hidden">
+    <div class="modal-dialog" style="max-width: 680px;">
+        <div class="modal-header">
+            <h3>🏛️ Discover Potential Shelters via OpenStreetMap</h3>
+            <button type="button" class="close-btn" onclick="closeDiscoverSheltersModal()">&times;</button>
+        </div>
+        <p style="font-size:13px; color:#cbd5e1; margin-bottom:12px;">
+            Scans OpenStreetMap for public civic infrastructure (schools, colleges, community centres, stadiums) near any disaster incident or coordinates.
+        </p>
+
+        <div class="form-grid" style="grid-template-columns: 2fr 1fr; margin-bottom:12px;">
+            <div>
+                <label>Incident Location or Coordinates</label>
+                <input id="discoverLocInput" type="text" placeholder="City or GPS (e.g. Chennai, or 13.0827, 80.2707)">
+            </div>
+            <div>
+                <label>Scan Radius (km)</label>
+                <select id="discoverRadiusInput">
+                    <option value="3">3 km Radius</option>
+                    <option value="5" selected>5 km Radius</option>
+                    <option value="10">10 km Radius</option>
+                </select>
+            </div>
+        </div>
+
+        <button type="button" class="primary-btn" style="width:100%; margin-bottom:16px;" onclick="executeDiscoverShelters()">
+            📡 Scan OpenStreetMap for Candidates
+        </button>
+
+        <div id="discoverStatusMsg" style="margin-bottom:10px; font-size:12.5px; color:#93c5fd;"></div>
+        <div id="discoverResultsContainer" style="max-height: 320px; overflow-y: auto;">
+            <p style="color:#64748b; font-size:13px; text-align:center;">Enter a location or coordinates above to discover candidate facilities.</p>
+        </div>
+    </div>
+</div>
+
+
+<!-- =====================================================
+     APPLICATION SCRIPTS
+===================================================== -->
+<script>
+
+let activeRole = "citizen";
+let currentSession = {};
+
+// Map & Layer References
+let adminMap = null;
+let citizenMap = null;
+let modalRouteMap = null;
+let adminMarkersLayer = null;
+let citizenMarkersLayer = null;
+let adminRouteLayer = null;
+let modalRouteLayer = null;
+let cachedMapTelemetry = null;
+
+// Chart.js References
+let chartRainfall = null;
+let chartPriority = null;
+let chartStatus = null;
+let chartShelters = null;
+let chartTimeline = null;
+
+
+/* =========================================================
+   AUTHENTICATION & ROLE SELECTION
+========================================================= */
+
+function selectRole(role) {
+    activeRole = role;
+    document.querySelectorAll(".role-btn").forEach(btn => btn.classList.remove("active"));
+
+    const btn = document.getElementById(role + "RoleBtn");
+    if (btn) btn.classList.add("active");
+
+    const regLink = document.getElementById("registerLink");
+    if (regLink) {
+        regLink.style.display = (role === "citizen") ? "block" : "none";
+    }
+
+    showLogin();
+    message("");
+}
+
+function showRegister() {
+    document.getElementById("loginForm").classList.add("hidden");
+    document.getElementById("registerForm").classList.remove("hidden");
+    message("");
+}
+
+function showLogin() {
+    document.getElementById("registerForm").classList.add("hidden");
+    document.getElementById("loginForm").classList.remove("hidden");
+    message("");
+}
+
+function message(text, success = false) {
+    const el = document.getElementById("loginMessage");
+    if (!el) return;
+    el.innerText = text;
+    el.className = "message " + (success ? "success" : "error");
+    if (!text) el.className = "message hidden";
+}
+
+async function registerCitizen() {
+    const name = document.getElementById("regName").value.trim();
+    const username = document.getElementById("regUsername").value.trim();
+    const password = document.getElementById("regPassword").value.trim();
+    const phone = document.getElementById("regPhone").value.trim();
+    const location = document.getElementById("regLocation").value.trim();
+
+    if (!name || !username || !password || !phone) {
+        message("Please fill all required fields.");
+        return;
+    }
+
+    try {
+        const response = await fetch("/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, username, password, phone, location })
+        });
+        const data = await response.json();
+        if (data.success) {
+            message("Account created successfully! Please log in.", true);
+            showLogin();
+            document.getElementById("loginUsername").value = username;
+        } else {
+            message(data.message || "Registration failed.");
+        }
+    } catch (err) {
+        message("Connection failure during registration.");
+    }
+}
+
+async function login() {
+    const username = document.getElementById("loginUsername").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+
+    if (!username || !password) {
+        message("Please provide both username and password.");
+        return;
+    }
+
+    let url = "/citizen-login";
+    if (activeRole === "admin") url = "/admin-login";
+    else if (activeRole === "rescue") url = "/rescue-login";
+
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            openDashboard(data.role || activeRole);
+        } else {
+            message(data.message || "Invalid credentials.");
+        }
+    } catch (err) {
+        message("Error contacting server. Please try again.");
+    }
+}
+
+async function logout() {
+    try {
+        await fetch("/logout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({})
+        });
+    } catch (e) {}
+    currentSession = {};
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("loginScreen").classList.remove("hidden");
+    document.getElementById("loginPassword").value = "";
+    message("");
+}
+
+
+/* =========================================================
+   DASHBOARD LIFECYCLE & TAB SWITCHING
+========================================================= */
+
+function openDashboard(role) {
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    document.querySelectorAll(".dashboard").forEach(d => d.classList.add("hidden"));
+
+    if (role === "citizen") {
+        document.getElementById("citizenDashboard").classList.remove("hidden");
+        document.getElementById("headerRole").innerText = "CITIZEN SAFETY PORTAL";
+        switchCitizenTab('report');
+        loadCitizenData();
+        loadLiveWeather();
+    } else if (role === "admin") {
+        document.getElementById("adminDashboard").classList.remove("hidden");
+        document.getElementById("headerRole").innerText = "DISASTER OPERATIONS CENTER";
+        switchAdminTab('overview');
+        loadAdminData();
+    } else {
+        document.getElementById("rescueDashboard").classList.remove("hidden");
+        document.getElementById("headerRole").innerText = "RESCUE SQUAD OPERATIONS";
+        switchRescueTab('missions');
+        loadRescueData();
+    }
+
+    loadSession();
+}
+
+async function loadSession() {
+    try {
+        const resp = await fetch("/session");
+        const data = await resp.json();
+        if (data.logged_in) {
+            currentSession = data;
+            const userLabel = document.getElementById("headerUser");
+            if (userLabel) {
+                userLabel.innerText = `Logged in: ${data.name || data.username} (${data.role})`;
+            }
+        }
+    } catch (e) {}
+}
+
+function switchCitizenTab(tabName) {
+    document.querySelectorAll(".citizen-tab-pane").forEach(p => p.classList.add("hidden"));
+    const tabs = document.querySelectorAll("#citizenDashboard .tab-btn");
+    tabs.forEach(t => t.classList.remove("active"));
+
+    if (tabName === 'report') {
+        document.getElementById("citizenTabReport").classList.remove("hidden");
+        tabs[0].classList.add("active");
+    } else if (tabName === 'requests') {
+        document.getElementById("citizenTabRequests").classList.remove("hidden");
+        tabs[1].classList.add("active");
+        loadCitizenRequests();
+    } else if (tabName === 'map') {
+        document.getElementById("citizenTabMap").classList.remove("hidden");
+        tabs[2].classList.add("active");
+        initCitizenMap();
+    } else if (tabName === 'weather') {
+        document.getElementById("citizenTabWeather").classList.remove("hidden");
+        tabs[3].classList.add("active");
+        loadLiveWeather();
+    } else if (tabName === 'notifs') {
+        document.getElementById("citizenTabNotifs").classList.remove("hidden");
+        tabs[4].classList.add("active");
+        loadNotifications();
+    }
+}
+
+function switchAdminTab(tabName) {
+    document.querySelectorAll(".admin-tab-pane").forEach(p => p.classList.add("hidden"));
+    const tabs = document.querySelectorAll("#adminDashboard .tab-btn");
+    tabs.forEach(t => t.classList.remove("active"));
+
+    if (tabName === 'overview') {
+        document.getElementById("adminTabOverview").classList.remove("hidden");
+        tabs[0].classList.add("active");
+        loadAdminStats();
+        loadFloodRiskAssessment();
+    } else if (tabName === 'map') {
+        document.getElementById("adminTabMap").classList.remove("hidden");
+        tabs[1].classList.add("active");
+        initAdminMap();
+    } else if (tabName === 'cases') {
+        document.getElementById("adminTabCases").classList.remove("hidden");
+        tabs[2].classList.add("active");
+        loadAdminRequests();
+    } else if (tabName === 'teams') {
+        document.getElementById("adminTabTeams").classList.remove("hidden");
+        tabs[3].classList.add("active");
+        loadAdminTeams();
+    } else if (tabName === 'shelters') {
+        document.getElementById("adminTabShelters").classList.remove("hidden");
+        tabs[4].classList.add("active");
+        loadAdminShelters();
+    } else if (tabName === 'analytics') {
+        document.getElementById("adminTabAnalytics").classList.remove("hidden");
+        tabs[5].classList.add("active");
+        loadAnalyticsCharts();
+    }
+}
+
+function switchRescueTab(tabName) {
+    document.querySelectorAll(".rescue-tab-pane").forEach(p => p.classList.add("hidden"));
+    const tabs = document.querySelectorAll("#rescueDashboard .tab-btn");
+    tabs.forEach(t => t.classList.remove("active"));
+
+    if (tabName === 'missions') {
+        document.getElementById("rescueTabMissions").classList.remove("hidden");
+        tabs[0].classList.add("active");
+        loadRescueData();
+    } else {
+        document.getElementById("rescueTabBeacon").classList.remove("hidden");
+        tabs[1].classList.add("active");
+    }
+}
+
+
+/* =========================================================
+   FEATURE 4: GPS GEOLOCATION ENGINE
+========================================================= */
+
+function focusManualAddressInput() {
+    const locInput = document.getElementById("reqLocation");
+    if (locInput) {
+        locInput.focus();
+        locInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+}
+
+let citizenGpsWatchId = null;
+let citizenGpsTimer = null;
+let citizenBestPos = null;
+let reportMiniMap = null;
+let reportMiniMarker = null;
+let reportMiniCircle = null;
+
+function detectCitizenLocation(isRetry = false) {
+    const statusEl = document.getElementById("gpsStatusBadge");
+    const coordsEl = document.getElementById("gpsCoordsDisplay");
+    const latInput = document.getElementById("reqLatitude");
+    const lonInput = document.getElementById("reqLongitude");
+    const accInput = document.getElementById("reqAccuracy");
+
+    if (!navigator.geolocation) {
+        statusEl.textContent = "GPS Not Supported";
+        statusEl.className = "gps-status denied";
+        coordsEl.innerHTML = `<span style="color:#f87171">Browser geolocation API is not supported on this device/browser.</span>`;
+        return;
+    }
+
+    // Check secure origin context (Browsers block geolocation on insecure origins except localhost/127.0.0.1)
+    const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname === "[::1]";
+    const isSecure = window.isSecureContext || window.location.protocol === "https:" || isLocal;
+    if (!isSecure) {
+        statusEl.textContent = "HTTPS Required";
+        statusEl.className = "gps-status denied";
+        coordsEl.innerHTML = `<div class="poor-accuracy-alert" style="border-color:#dc2626; background:rgba(220,38,38,0.12);"><strong style="color:#f87171;">⚠️ Insecure Origin Restriction</strong>Modern browsers block geolocation on non-HTTPS origins. Please access the application via <b>http://127.0.0.1:5000/</b> or enter your location manually.</div>`;
+        return;
+    }
+
+    // Reset watch and timer
+    if (citizenGpsWatchId !== null) {
+        navigator.geolocation.clearWatch(citizenGpsWatchId);
+        citizenGpsWatchId = null;
+    }
+    if (citizenGpsTimer !== null) {
+        clearTimeout(citizenGpsTimer);
+        citizenGpsTimer = null;
+    }
+    citizenBestPos = null;
+
+    statusEl.textContent = isRetry ? "Scanning Signals (Watch)..." : "Locking Coordinates...";
+    statusEl.className = "gps-status searching";
+    coordsEl.innerHTML = `<span>Scanning Wi-Fi access points and hardware sensors for highest precision...</span>`;
+
+    const geoOptions = {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 0
+    };
+
+    // Watchdog timer: finalize after 6 seconds with best position acquired
+    citizenGpsTimer = setTimeout(() => {
+        if (citizenGpsWatchId !== null) {
+            navigator.geolocation.clearWatch(citizenGpsWatchId);
+            citizenGpsWatchId = null;
+        }
+        if (citizenBestPos) {
+            applyDetectedPosition(citizenBestPos);
+        } else {
+            handleGpsError({ code: 3, message: "Position acquisition timed out" });
+        }
+    }, 6000);
+
+    citizenGpsWatchId = navigator.geolocation.watchPosition(
+        (pos) => {
+            const acc = pos.coords.accuracy;
+            console.log(`[Geolocation Stream] Fix: lat=${pos.coords.latitude}, lon=${pos.coords.longitude}, acc=±${acc}m`);
+
+            if (!citizenBestPos || acc < citizenBestPos.coords.accuracy) {
+                citizenBestPos = pos;
+            }
+
+            // High precision fix (<= 150m) achieved: lock immediately without waiting for watchdog
+            if (acc <= 150) {
+                if (citizenGpsTimer) clearTimeout(citizenGpsTimer);
+                if (citizenGpsWatchId !== null) {
+                    navigator.geolocation.clearWatch(citizenGpsWatchId);
+                    citizenGpsWatchId = null;
+                }
+                applyDetectedPosition(citizenBestPos);
+            } else {
+                const curKm = (citizenBestPos.coords.accuracy / 1000).toFixed(1);
+                coordsEl.innerHTML = `<span>Acquiring signal... Best fix so far: ±${Math.round(citizenBestPos.coords.accuracy)}m (${curKm}km). Refining...</span>`;
+            }
+        },
+        (err) => {
+            if (citizenBestPos) {
+                if (citizenGpsTimer) clearTimeout(citizenGpsTimer);
+                if (citizenGpsWatchId !== null) {
+                    navigator.geolocation.clearWatch(citizenGpsWatchId);
+                    citizenGpsWatchId = null;
+                }
+                applyDetectedPosition(citizenBestPos);
+            } else {
+                if (citizenGpsTimer) clearTimeout(citizenGpsTimer);
+                if (citizenGpsWatchId !== null) {
+                    navigator.geolocation.clearWatch(citizenGpsWatchId);
+                    citizenGpsWatchId = null;
+                }
+                handleGpsError(err);
+            }
+        },
+        geoOptions
+    );
+}
+
+function applyDetectedPosition(pos) {
+    const statusEl = document.getElementById("gpsStatusBadge");
+    const coordsEl = document.getElementById("gpsCoordsDisplay");
+    const latInput = document.getElementById("reqLatitude");
+    const lonInput = document.getElementById("reqLongitude");
+    const accInput = document.getElementById("reqAccuracy");
+
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    const acc = pos.coords.accuracy; // in meters
+
+    console.log(`[Geolocation Locked] Finalized fix: lat=${lat}, lon=${lon}, accuracy=±${acc}m`);
+
+    // TIER 4: Extreme Broad Network Gateway (> 25,000m / 25 km, e.g. 259,044m Chennai gateway)
+    if (acc > 25000) {
+        if (latInput) latInput.value = "";
+        if (lonInput) lonInput.value = "";
+        if (accInput) accInput.value = "";
+
+        const accKm = (acc / 1000).toFixed(0);
+        statusEl.textContent = `Broad Network Proxy (±${accKm}km)`;
+        statusEl.className = "gps-status warning";
+
+        coordsEl.innerHTML = `
+            <div class="poor-accuracy-alert">
+                <strong>⚠️ Broad Network Uncertainty (±${accKm} km / ${Math.round(acc)} metres)</strong>
+                <p style="margin:4px 0 8px 0;">
+                    Your browser reported an approximate location (${lat.toFixed(5)}, ${lon.toFixed(5)}) with a regional uncertainty of ±${accKm} km.
+                    This occurs when a PC lacks Wi-Fi scanning or GPS and defaults to an ISP regional internet gateway.
+                </p>
+                <p style="margin:4px 0 8px 0; font-weight:600; color:#fde047;">
+                    Please type your street, landmark, or area name manually in the search box above.
+                </p>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                    <button type="button" class="gps-btn" style="padding:6px 12px; font-size:12px;" onclick="detectCitizenLocation(true)">🔄 Retry Detection</button>
+                    <button type="button" class="secondary-btn" style="padding:6px 12px; font-size:12px;" onclick="focusManualAddressInput()">✏️ Enter Address Manually</button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    // VALID LOCATION FIX (Tiers 1, 2, 3: acc <= 25000m)
+    // PRESERVE GENUINE DEVICE COORDINATES
+    if (latInput) latInput.value = lat;
+    if (lonInput) lonInput.value = lon;
+    if (accInput) accInput.value = acc;
+
+    // Render interactive mini map preview
+    renderReportGpsMiniMap(lat, lon, acc);
+
+    // Update main citizen map if initialized
+    if (citizenMap) {
+        citizenMap.setView([lat, lon], 14);
+    }
+
+    let tierBadge = "";
+    let tierClass = "gps-status locked";
+    let tierDesc = "";
+
+    if (acc <= 150) {
+        tierBadge = `GPS Locked (±${Math.round(acc)}m)`;
+        tierClass = "gps-status locked";
+        tierDesc = `<span style="color:#86efac; font-weight:bold;">✓ High-precision device GPS locked</span>`;
+    } else if (acc <= 1200) {
+        tierBadge = `Street Fix (±${Math.round(acc)}m)`;
+        tierClass = "gps-status locked";
+        tierDesc = `<span style="color:#86efac; font-weight:600;">✓ Street-level Wi-Fi coordinates locked</span>`;
+    } else {
+        const accKm = (acc / 1000).toFixed(1);
+        tierBadge = `Campus / Area Fix (±${accKm}km)`;
+        tierClass = "gps-status warning";
+        tierDesc = `
+            <span style="color:#fde047; font-weight:600;">📍 Real Device Location Detected (Wi-Fi Area Fix: ±${accKm} km)</span>
+            <div style="font-size:11.5px; color:#cbd5e1; margin-top:3px;">
+                PC Wi-Fi localization identified your neighborhood. You can adjust the pin on the map below or type your exact building/landmark above.
+            </div>
+        `;
+    }
+
+    statusEl.textContent = tierBadge;
+    statusEl.className = tierClass;
+
+    coordsEl.innerHTML = `
+        <span><b>Latitude:</b> <span id="dispLat">${lat.toFixed(5)}</span></span>
+        <span><b>Longitude:</b> <span id="dispLon">${lon.toFixed(5)}</span></span>
+        <span><b>Accuracy:</b> <span id="dispAcc">±${Math.round(acc)} metres</span></span>
+        ${tierDesc}
+        <div id="revGeoStatus" style="font-size:11.5px; color:#94a3b8; margin-top:6px;">Resolving area details...</div>
+    `;
+
+    // Reverse-geocode to confirm area name
+    const locInput = document.getElementById("reqLocation");
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`, {
+        headers: { "Accept-Language": "en", "User-Agent": "SmartFloodRescue/2.0" }
+    })
+    .then(r => r.json())
+    .then(rev => {
+        const revEl = document.getElementById("revGeoStatus");
+        if (rev && rev.display_name) {
+            if (locInput && !locInput.value.trim()) {
+                locInput.value = rev.display_name;
+            }
+            if (revEl) {
+                revEl.innerHTML = `<span style="color:#93c5fd; font-weight:600;">📍 Resolved Location: ${escapeHtml(rev.display_name)}</span>`;
+            }
+        } else if (revEl) {
+            revEl.innerHTML = `<span style="color:#cbd5e1;">⚠️ Device coordinates (${lat.toFixed(5)}, ${lon.toFixed(5)}) confirmed. Please specify street/building above.</span>`;
+        }
+    })
+    .catch(() => {
+        const revEl = document.getElementById("revGeoStatus");
+        if (revEl) {
+            revEl.innerHTML = `<span style="color:#cbd5e1;">📍 Device coordinates (${lat.toFixed(5)}, ${lon.toFixed(5)}) confirmed.</span>`;
+        }
+    });
+}
+
+function renderReportGpsMiniMap(lat, lon, acc) {
+    const container = document.getElementById("reportGpsMiniMap");
+    if (!container) return;
+    container.style.display = "block";
+
+    if (!reportMiniMap) {
+        reportMiniMap = L.map("reportGpsMiniMap").setView([lat, lon], acc > 2000 ? 13 : 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(reportMiniMap);
+
+        reportMiniMap.on("click", (e) => {
+            updatePinpointLocation(e.latlng.lat, e.latlng.lng);
+        });
+    } else {
+        reportMiniMap.setView([lat, lon], acc > 2000 ? 13 : 15);
+        setTimeout(() => reportMiniMap.invalidateSize(), 150);
+    }
+
+    if (reportMiniCircle) {
+        reportMiniMap.removeLayer(reportMiniCircle);
+        reportMiniCircle = null;
+    }
+    if (acc > 50) {
+        reportMiniCircle = L.circle([lat, lon], {
+            radius: acc,
+            color: '#3b82f6',
+            fillColor: '#60a5fa',
+            fillOpacity: 0.15,
+            weight: 1
+        }).addTo(reportMiniMap);
+    }
+
+    if (reportMiniMarker) {
+        reportMiniMarker.setLatLng([lat, lon]);
+    } else {
+        reportMiniMarker = L.marker([lat, lon], { draggable: true }).addTo(reportMiniMap);
+        reportMiniMarker.on("dragend", () => {
+            const pos = reportMiniMarker.getLatLng();
+            updatePinpointLocation(pos.lat, pos.lng);
+        });
+    }
+
+    reportMiniMarker.bindPopup(`<b>Your Reported Location</b><br><small>Drag pin or click anywhere on the map to adjust</small>`).openPopup();
+}
+
+function updatePinpointLocation(lat, lon) {
+    const latInput = document.getElementById("reqLatitude");
+    const lonInput = document.getElementById("reqLongitude");
+    const accInput = document.getElementById("reqAccuracy");
+    const dispLat = document.getElementById("dispLat");
+    const dispLon = document.getElementById("dispLon");
+    const dispAcc = document.getElementById("dispAcc");
+    const statusEl = document.getElementById("gpsStatusBadge");
+
+    if (latInput) latInput.value = lat;
+    if (lonInput) lonInput.value = lon;
+    if (accInput) accInput.value = "pinpoint";
+
+    if (dispLat) dispLat.textContent = lat.toFixed(5);
+    if (dispLon) dispLon.textContent = lon.toFixed(5);
+    if (dispAcc) dispAcc.textContent = "Pinpoint (Exact Map Marker)";
+
+    if (statusEl) {
+        statusEl.textContent = "Pinpoint Verified";
+        statusEl.className = "gps-status locked";
+    }
+
+    if (reportMiniMarker) {
+        reportMiniMarker.setLatLng([lat, lon]);
+    }
+    if (reportMiniCircle && reportMiniMap) {
+        reportMiniMap.removeLayer(reportMiniCircle);
+        reportMiniCircle = null;
+    }
+
+    const revEl = document.getElementById("revGeoStatus");
+    if (revEl) revEl.innerHTML = `<span style="color:#94a3b8;">Resolving pinpoint address...</span>`;
+
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`, {
+        headers: { "Accept-Language": "en", "User-Agent": "SmartFloodRescue/2.0" }
+    })
+    .then(r => r.json())
+    .then(rev => {
+        const locInput = document.getElementById("reqLocation");
+        if (rev && rev.display_name) {
+            if (locInput) locInput.value = rev.display_name;
+            if (revEl) {
+                revEl.innerHTML = `<span style="color:#86efac; font-weight:600;">🎯 Pinpoint Address: ${escapeHtml(rev.display_name)}</span>`;
+            }
+        }
+    })
+    .catch(() => {});
+}
+
+function handleGpsError(err) {
+    const statusEl = document.getElementById("gpsStatusBadge");
+    const coordsEl = document.getElementById("gpsCoordsDisplay");
+    const latInput = document.getElementById("reqLatitude");
+    const lonInput = document.getElementById("reqLongitude");
+    const accInput = document.getElementById("reqAccuracy");
+
+    if (latInput) latInput.value = "";
+    if (lonInput) lonInput.value = "";
+    if (accInput) accInput.value = "";
+
+    let title = "Location Access Error";
+    let instructions = "";
+
+    if (err.code === 1) { // PERMISSION_DENIED
+        statusEl.textContent = "Permission Denied";
+        statusEl.className = "gps-status denied";
+        title = "Location Permission Denied";
+        instructions = `
+            <p style="margin:4px 0 6px 0;">Location access was blocked by your browser settings.</p>
+            <p style="margin:4px 0 6px 0; color:#cbd5e1;"><b>How to enable:</b></p>
+            <ol style="margin:2px 0 8px 18px; padding:0; color:#cbd5e1; font-size:12px;">
+                <li>Click the tune/lock icon (🔒 or 🎛️) on the left side of the address bar (${window.location.origin}).</li>
+                <li>Set <b>Location</b> to <b>Allow</b>.</li>
+                <li>Click <b>Retry Location Detection</b> below.</li>
+            </ol>
+        `;
+    } else if (err.code === 2) { // POSITION_UNAVAILABLE
+        statusEl.textContent = "Position Unavailable";
+        statusEl.className = "gps-status denied";
+        title = "Location Signal Unavailable";
+        instructions = `
+            <p style="margin:4px 0 8px 0;">Your device could not acquire a Wi-Fi or satellite location fix (Windows Location Services disabled or Wi-Fi turned off).</p>
+            <p style="margin:4px 0 8px 0; color:#fde047;">Ensure Windows Settings &gt; Privacy &amp; Security &gt; Location is turned ON, or type your street address manually above.</p>
+        `;
+    } else if (err.code === 3) { // TIMEOUT
+        statusEl.textContent = "Acquisition Timed Out";
+        statusEl.className = "gps-status denied";
+        title = "Location Request Timed Out";
+        instructions = `
+            <p style="margin:4px 0 8px 0;">The browser timed out waiting for a location fix from Windows Location Services.</p>
+        `;
+    }
+
+    coordsEl.innerHTML = `
+        <div class="poor-accuracy-alert" style="border-color:#dc2626; background:rgba(220,38,38,0.12);">
+            <strong style="color:#f87171;">❌ ${title}</strong>
+            ${instructions}
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                <button type="button" class="gps-btn" style="padding:6px 12px; font-size:12px;" onclick="detectCitizenLocation(true)">🔄 Retry Location Detection</button>
+                <button type="button" class="secondary-btn" style="padding:6px 12px; font-size:12px;" onclick="focusManualAddressInput()">✏️ Enter Address Manually</button>
+            </div>
+        </div>
+    `;
+}
+
+function updateRescueTeamGPS() {
+    const statusEl = document.getElementById("rescueGpsStatus");
+    const coordsEl = document.getElementById("rescueCoordsDisplay");
+
+    if (!navigator.geolocation) {
+        statusEl.textContent = "GPS Not Supported";
+        statusEl.className = "gps-status denied";
+        return;
+    }
+
+    statusEl.textContent = "Locking Position...";
+    statusEl.className = "gps-status searching";
+
+    navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            const acc = pos.coords.accuracy;
+
+            if (acc > 15000) {
+                const accKm = (acc / 1000).toFixed(0);
+                statusEl.textContent = `Imprecise (±${accKm}km)`;
+                statusEl.className = "gps-status warning";
+                coordsEl.innerHTML = `
+                    <div class="poor-accuracy-alert">
+                        <strong>⚠️ Imprecise Location (±${accKm} km):</strong>
+                        Cannot broadcast beacon with broad network uncertainty (±${Math.round(acc)}m). High-accuracy GPS or local Wi-Fi required.
+                        <div style="margin-top:6px;">
+                            <button type="button" class="gps-btn" style="padding:4px 10px; font-size:11px;" onclick="updateRescueTeamGPS()">🔄 Retry Position Lock</button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const resp = await fetch("/rescue/update-location", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ latitude: lat, longitude: lon })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    const label = acc <= 1200 ? `Live Beacon Active (±${Math.round(acc)}m)` : `Live Beacon Active (Area: ±${(acc/1000).toFixed(1)}km)`;
+                    statusEl.textContent = label;
+                    statusEl.className = "gps-status locked";
+                    coordsEl.innerHTML = `<span><b>Position Transmitted:</b> ${lat.toFixed(5)}, ${lon.toFixed(5)} (Accuracy: ±${Math.round(acc)}m)</span>`;
+                } else {
+                    statusEl.textContent = "Broadcast Failed";
+                    statusEl.className = "gps-status denied";
+                }
+            } catch (e) {
+                statusEl.textContent = "Transmission Error";
+                statusEl.className = "gps-status denied";
+            }
+        },
+        (err) => {
+            statusEl.textContent = "Permission / Signal Error";
+            statusEl.className = "gps-status denied";
+            coordsEl.innerHTML = `<span style="color:#f87171">Location permission or signal required to broadcast team GPS.</span>`;
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+}
+
+
+/* =========================================================
+   FEATURE 1: INTERACTIVE MAP (LEAFLET.JS)
+========================================================= */
+
+function createMarkerIcon(color, symbol = "") {
+    return L.divIcon({
+        className: 'custom-map-marker',
+        html: `<div style="
+            background: ${color};
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 10px ${color};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: bold;
+        ">${symbol}</div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+    });
+}
+
+function initAdminMap() {
+    const container = document.getElementById("floodMap");
+    if (!container) return;
+
+    if (!adminMap) {
+        adminMap = L.map("floodMap").setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors | Smart Flood Evacuation',
+            maxZoom: 19
+        }).addTo(adminMap);
+
+        adminMarkersLayer = L.layerGroup().addTo(adminMap);
+        adminRouteLayer = L.layerGroup().addTo(adminMap);
+    } else {
+        setTimeout(() => adminMap.invalidateSize(), 200);
+    }
+
+    loadMapTelemetry(adminMap, adminMarkersLayer);
+}
+
+function initCitizenMap() {
+    const container = document.getElementById("citizenFloodMap");
+    if (!container) return;
+
+    if (!citizenMap) {
+        citizenMap = L.map("citizenFloodMap").setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(citizenMap);
+
+        citizenMarkersLayer = L.layerGroup().addTo(citizenMap);
+    } else {
+        setTimeout(() => citizenMap.invalidateSize(), 200);
+    }
+
+    loadMapTelemetry(citizenMap, citizenMarkersLayer);
+}
+
+async function loadMapTelemetry(mapObj, layerObj) {
+    try {
+        const resp = await fetch("/api/map/emergency-data");
+        const data = await resp.json();
+        if (!data.success) return;
+
+        cachedMapTelemetry = data;
+        renderMapMarkers(mapObj, layerObj, data);
+        renderUnmappedList(data.unmapped_requests || []);
+    } catch (e) {
+        console.error("Map telemetry load failure:", e);
+    }
+}
+
+function renderMapMarkers(mapObj, layerObj, data) {
+    if (!layerObj) return;
+    layerObj.clearLayers();
+
+    const priorityColors = {
+        "Critical": "#ef4444",
+        "High": "#f97316",
+        "Medium": "#eab308",
+        "Low": "#22c55e"
+    };
+
+    const allMarkerCoords = [];
+
+    // 1. Shelters (Differentiate Verified Operational vs Discovered Candidates)
+    (data.shelters || []).forEach(shelter => {
+        if (shelter.latitude && shelter.longitude) {
+            allMarkerCoords.push([shelter.latitude, shelter.longitude]);
+            const isVerified = Boolean(shelter.is_verified);
+            const icon = createMarkerIcon(isVerified ? "#a855f7" : "#f59e0b", isVerified ? "🏠" : "🏛️");
+            const marker = L.marker([shelter.latitude, shelter.longitude], { icon });
+
+            const statusBadge = isVerified
+                ? `<span style="color:#86efac; font-size:11px; font-weight:bold;">✓ Verified Operational Shelter</span>`
+                : `<span class="candidate-badge">⚠️ Potential Candidate (Unverified)</span>`;
+
+            const popupHtml = `
+                <div class="map-popup-card">
+                    <h4>${isVerified ? '🏠' : '🏛️'} ${escapeHtml(shelter.name)}</h4>
+                    <div style="margin-bottom:6px;">${statusBadge}</div>
+                    <p><b>Location:</b> ${escapeHtml(shelter.location)}</p>
+                    <p><b>Capacity:</b> ${shelter.occupied} / ${shelter.capacity} spaces</p>
+                    <p><b>Available:</b> <span style="color:#86efac; font-weight:bold;">${shelter.available}</span></p>
+                    <p><b>Hotline:</b> ${escapeHtml(shelter.contact_phone || 'Emergency Control')}</p>
+                </div>
+            `;
+            marker.bindPopup(popupHtml);
+            layerObj.addLayer(marker);
+        }
+    });
+
+    // 2. Rescue Teams (Differentiate Live GPS Beacon vs Predefined Base Station)
+    (data.rescue_teams || []).forEach(team => {
+        if (team.latitude && team.longitude) {
+            allMarkerCoords.push([team.latitude, team.longitude]);
+            const isLive = Boolean(team.is_live_gps);
+            const icon = createMarkerIcon(isLive ? "#2563eb" : "#475569", "🚒");
+            const marker = L.marker([team.latitude, team.longitude], { icon });
+
+            const beaconBadge = isLive
+                ? `<span class="live-beacon-pill">📡 Live GPS Beacon</span>`
+                : `<span class="base-station-pill">🏢 Base Station (Predefined)</span>`;
+
+            const popupHtml = `
+                <div class="map-popup-card">
+                    <h4>🚒 ${escapeHtml(team.team_name)}</h4>
+                    <div style="margin-bottom:6px;">${beaconBadge}</div>
+                    <p><b>Base / Station:</b> ${escapeHtml(team.location)}</p>
+                    <p><b>Status:</b> <span class="status ${statusClass(team.status)}">${team.status}</span></p>
+                    <p><b>Contact:</b> ${escapeHtml(team.phone || 'Radio Channel 1')}</p>
+                    ${team.last_location_update ? `<p><small style="color:#94a3b8;">Updated: ${escapeHtml(team.last_location_update)}</small></p>` : ''}
+                </div>
+            `;
+            marker.bindPopup(popupHtml);
+            layerObj.addLayer(marker);
+        }
+    });
+
+    // 3. Road Hazards
+    (data.road_hazards || []).forEach(hazard => {
+        if (hazard.latitude && hazard.longitude) {
+            allMarkerCoords.push([hazard.latitude, hazard.longitude]);
+            const icon = createMarkerIcon("#dc2626", "⚠️");
+            const marker = L.marker([hazard.latitude, hazard.longitude], { icon });
+            const popupHtml = `
+                <div class="map-popup-card">
+                    <h4 style="color:#f87171;">⚠️ ${escapeHtml(hazard.name)}</h4>
+                    <p><b>Severity:</b> <span style="color:#ef4444; font-weight:bold;">${escapeHtml(hazard.severity)}</span></p>
+                    <p><b>Location:</b> ${escapeHtml(hazard.location)}</p>
+                    <p>${escapeHtml(hazard.description || 'Road segment submerged.')}</p>
+                </div>
+            `;
+            marker.bindPopup(popupHtml);
+            layerObj.addLayer(marker);
+        }
+    });
+
+    // 4. Emergency Requests
+    const pFilter = document.getElementById("mapFilterPriority") ? document.getElementById("mapFilterPriority").value : "all";
+    const sFilter = document.getElementById("mapFilterStatus") ? document.getElementById("mapFilterStatus").value : "all";
+    const searchVal = document.getElementById("mapFilterSearch") ? document.getElementById("mapFilterSearch").value.trim().toLowerCase() : "";
+
+    (data.mapped_requests || []).forEach(req => {
+        if (pFilter !== "all" && req.priority !== pFilter) return;
+        if (sFilter !== "all" && req.status !== sFilter) return;
+        if (searchVal && !req.location.toLowerCase().includes(searchVal) && !(req.citizen_name || "").toLowerCase().includes(searchVal)) return;
+
+        allMarkerCoords.push([req.latitude, req.longitude]);
+        const color = priorityColors[req.priority] || "#3b82f6";
+        const icon = createMarkerIcon(color, "🚨");
+        const marker = L.marker([req.latitude, req.longitude], { icon });
+
+        const isMed = req.medical_urgent ? `<span class="vuln-badge medical">🚨 Urgent Medical</span>` : "";
+        const popupHtml = `
+            <div class="map-popup-card">
+                <h4>Case #${req.id} — ${escapeHtml(req.citizen_name)}</h4>
+                <p><b>Location:</b> 📍 ${escapeHtml(req.location)}</p>
+                <p><b>People:</b> 👥 ${req.people} | <b>Flood:</b> 🌊 Level ${req.flood_level}/5</p>
+                <p><b>Triage Priority:</b> <span class="priority ${priorityClass(req.priority)}">${req.priority} (${Math.round(req.priority_score || 0)} pts)</span></p>
+                <p><b>Status:</b> <span class="status ${statusClass(req.status)}">${req.status}</span></p>
+                <p><b>Assigned Fleet:</b> ${escapeHtml(req.assigned_team || 'Pending assignment')}</p>
+                <p><b>Shelter:</b> ${escapeHtml(req.shelter || 'Not assigned')}</p>
+                <div style="margin-top:6px;">${isMed}</div>
+                <div style="margin-top:10px;">
+                    <button class="primary-btn" style="padding:6px 12px; font-size:12px;" onclick="openEvacuationRoute(${req.id})">
+                        🗺️ Plan Evacuation Route
+                    </button>
+                </div>
+            </div>
+        `;
+        marker.bindPopup(popupHtml);
+        layerObj.addLayer(marker);
+    });
+
+    // Dynamically auto-fit map view to surround all active geographic markers
+    if (allMarkerCoords.length > 0 && mapObj) {
+        try {
+            const bounds = L.latLngBounds(allMarkerCoords);
+            mapObj.fitBounds(bounds, { padding: [35, 35], maxZoom: 14 });
+        } catch (e) {
+            console.warn("Could not fitBounds:", e);
+        }
+    }
+}
+
+function applyMapFilters() {
+    if (adminMap && adminMarkersLayer && cachedMapTelemetry) {
+        renderMapMarkers(adminMap, adminMarkersLayer, cachedMapTelemetry);
+    }
+}
+
+function refreshInteractiveMap() {
+    if (adminMap && adminMarkersLayer) {
+        loadMapTelemetry(adminMap, adminMarkersLayer);
+    }
+    if (citizenMap && citizenMarkersLayer) {
+        loadMapTelemetry(citizenMap, citizenMarkersLayer);
+    }
+}
+
+function renderUnmappedList(unmapped) {
+    const container = document.getElementById("unmappedChips");
+    if (!container) return;
+
+    if (!unmapped || unmapped.length === 0) {
+        container.innerHTML = `<span style="color:#86efac;">All current active cases have verified GPS coordinates mapped.</span>`;
+        return;
+    }
+
+    container.innerHTML = unmapped.map(req => `
+        <div class="unmapped-chip">
+            <b>#${req.id}</b> ${escapeHtml(req.location)} (${req.people} ppl, Level ${req.flood_level})
+            <span class="priority ${priorityClass(req.priority)}" style="font-size:10px; padding:2px 6px;">${req.priority}</span>
+        </div>
+    `).join("");
+}
+
+
+/* =========================================================
+   FEATURE 3: ENVIRONMENTAL FLOOD RISK ASSESSMENT
+========================================================= */
+
+async function loadFloodRiskAssessment(locationOverride = null) {
+    try {
+        const targetLoc = (locationOverride && locationOverride.trim()) ? locationOverride.trim() : "Coimbatore";
+        const locLabel = document.getElementById("riskLocationLabel");
+        if (locLabel) locLabel.innerText = `Location: Analyzing ${targetLoc}...`;
+
+        const resp = await fetch(`/api/flood-risk/assess?location=${encodeURIComponent(targetLoc)}`);
+        const data = await resp.json();
+        if (!data.success) return;
+
+        const a = data.assessment;
+        if (locLabel) locLabel.innerText = `Location: ${a.location}`;
+
+        const badge = document.getElementById("riskCategoryBadge");
+        const meter = document.getElementById("riskMeterFill");
+        const rec = document.getElementById("riskRecommendationText");
+        const grid = document.getElementById("riskFactorsGrid");
+        const comp = document.getElementById("riskDataCompleteness");
+
+        if (badge) {
+            badge.innerText = `${a.risk_category} Risk (${a.risk_score}/100)`;
+            badge.className = `risk-badge ${a.risk_category.toLowerCase()}`;
+        }
+
+        if (meter) {
+            meter.style.width = `${Math.min(100, Math.max(5, a.risk_score))}%`;
+            if (a.risk_category === "Severe") meter.style.background = "#ef4444";
+            else if (a.risk_category === "High") meter.style.background = "#f97316";
+            else if (a.risk_category === "Moderate") meter.style.background = "#eab308";
+            else meter.style.background = "#22c55e";
+        }
+
+        if (rec) {
+            rec.innerText = a.recommendation;
+        }
+
+        if (grid && a.factors) {
+            grid.innerHTML = `
+                <div class="factor-box">
+                    <small>Live Rainfall Telemetry</small>
+                    <strong>${a.factors.current_rain.detail}</strong>
+                    <div style="font-size:11px; color:#8da4bf;">Weighted: +${a.factors.current_rain.weighted_pts} pts</div>
+                </div>
+                <div class="factor-box">
+                    <small>24h Forecast Precipitation</small>
+                    <strong>${a.factors.forecast_rain.detail}</strong>
+                    <div style="font-size:11px; color:#8da4bf;">Weighted: +${a.factors.forecast_rain.weighted_pts} pts</div>
+                </div>
+                <div class="factor-box">
+                    <small>Citizen Severity Telemetry</small>
+                    <strong>${a.factors.citizen_reports.detail}</strong>
+                    <div style="font-size:11px; color:#8da4bf;">Weighted: +${a.factors.citizen_reports.weighted_pts} pts</div>
+                </div>
+                <div class="factor-box">
+                    <small>Regional Terrain Vulnerability</small>
+                    <strong>${a.factors.terrain_area.detail}</strong>
+                    <div style="font-size:11px; color:#8da4bf;">Weighted: +${a.factors.terrain_area.weighted_pts} pts</div>
+                </div>
+            `;
+        }
+
+        if (comp) {
+            comp.innerText = `Data Source Integrity: ${a.data_completeness}. Evaluated: ${a.assessment_timestamp}.`;
+        }
+    } catch (e) {
+        console.error("Flood risk assessment fetch error:", e);
+    }
+}
+
+
+/* =========================================================
+   FEATURE 5: SAFE EVACUATION ROUTE PLANNER
+========================================================= */
+
+async function openEvacuationRoute(requestId, shelterId = null) {
+    const modal = document.getElementById("routeModal");
+    modal.classList.remove("hidden");
+
+    document.getElementById("routeDistDisplay").innerText = "Calculating...";
+    document.getElementById("routeTimeDisplay").innerText = "Calculating...";
+    document.getElementById("routeEngineDisplay").innerText = "Analyzing hazards...";
+    document.getElementById("routeDestinationDetails").innerHTML = "";
+
+    try {
+        const bodyPayload = { request_id: requestId };
+        if (shelterId) bodyPayload.shelter_id = shelterId;
+
+        const resp = await fetch("/api/route/plan", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(bodyPayload)
+        });
+        const data = await resp.json();
+
+        if (!data.success) {
+            alert(data.message || "Could not calculate route. Ensure GPS coordinates are present.");
+            closeRouteModal();
+            return;
+        }
+
+        document.getElementById("routeDistDisplay").innerText = `${data.distance_km} km`;
+        document.getElementById("routeTimeDisplay").innerText = `${data.estimated_duration_min} mins`;
+        document.getElementById("routeEngineDisplay").innerText = data.engine;
+
+        document.getElementById("routeDestinationDetails").innerHTML = `
+            <strong>Target Shelter:</strong> ${escapeHtml(data.shelter_name)}
+            <span style="color:#86efac; margin-left:12px;">Available Spaces: ${data.shelter_available}</span>
+            <span style="margin-left:12px; color:#93c5fd;">Hotline: ${escapeHtml(data.shelter_contact || '112')}</span>
+        `;
+
+        const warningsList = document.getElementById("routeWarningsList");
+        warningsList.innerHTML = (data.warnings || []).map(w => `<li>${escapeHtml(w)}</li>`).join("");
+
+        // Render modal mini-map with route polyline
+        setTimeout(() => {
+            if (!modalRouteMap) {
+                modalRouteMap = L.map("routeModalMap").setView([11.0168, 76.9558], 12);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(modalRouteMap);
+                modalRouteLayer = L.layerGroup().addTo(modalRouteMap);
+            } else {
+                modalRouteMap.invalidateSize();
+                modalRouteLayer.clearLayers();
+            }
+
+            if (data.route_coordinates && data.route_coordinates.length > 0) {
+                const polyline = L.polyline(data.route_coordinates, {
+                    color: '#38bdf8',
+                    weight: 5,
+                    opacity: 0.85,
+                    dashArray: '8, 8'
+                }).addTo(modalRouteLayer);
+
+                // Add start & end markers
+                const startPt = data.route_coordinates[0];
+                const endPt = data.route_coordinates[data.route_coordinates.length - 1];
+
+                L.marker(startPt, { icon: createMarkerIcon('#ef4444', '📍') }).bindPopup("Citizen Location").addTo(modalRouteLayer);
+                L.marker(endPt, { icon: createMarkerIcon('#a855f7', '🏠') }).bindPopup(`Safe Shelter: ${data.shelter_name}`).addTo(modalRouteLayer);
+
+                modalRouteMap.fitBounds(polyline.getBounds(), { padding: [30, 30] });
+            }
+        }, 200);
+
+    } catch (e) {
+        alert("Error requesting route plan: " + e.message);
+        closeRouteModal();
+    }
+}
+
+function closeRouteModal() {
+    document.getElementById("routeModal").classList.add("hidden");
+}
+
+
+/* =========================================================
+   FEATURE 6: REAL DATA ANALYTICS (CHART.JS)
+========================================================= */
+
+async function loadAnalyticsCharts() {
+    try {
+        const resp = await fetch("/api/analytics/dashboard");
+        const data = await resp.json();
+        if (!data.success) return;
+
+        // Chart B: Priority Breakdown (Doughnut)
+        const pCtx = document.getElementById("chartPriorityCanvas");
+        if (pCtx) {
+            if (chartPriority) chartPriority.destroy();
+            chartPriority = new Chart(pCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Critical', 'High', 'Medium', 'Low'],
+                    datasets: [{
+                        data: [
+                            data.priority_distribution.Critical || 0,
+                            data.priority_distribution.High || 0,
+                            data.priority_distribution.Medium || 0,
+                            data.priority_distribution.Low || 0
+                        ],
+                        backgroundColor: ['#ef4444', '#f97316', '#eab308', '#22c55e'],
+                        borderColor: '#09203a',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#cbd5e1' } }
+                    }
+                }
+            });
+        }
+
+        // Chart C: Status Distribution (Bar)
+        const sCtx = document.getElementById("chartStatusCanvas");
+        if (sCtx) {
+            if (chartStatus) chartStatus.destroy();
+            chartStatus = new Chart(sCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Pending', 'Assigned', 'In Progress', 'Rescued', 'Cancelled'],
+                    datasets: [{
+                        label: 'Cases',
+                        data: [
+                            data.status_distribution.Pending || 0,
+                            data.status_distribution.Assigned || 0,
+                            data.status_distribution["In Progress"] || 0,
+                            data.status_distribution.Rescued || 0,
+                            data.status_distribution.Cancelled || 0
+                        ],
+                        backgroundColor: '#38bdf8',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#16365c' } },
+                        y: { ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: '#16365c' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // Chart D: Shelter Capacities (Bar)
+        const shCtx = document.getElementById("chartSheltersCanvas");
+        if (shCtx) {
+            if (chartShelters) chartShelters.destroy();
+            const labels = (data.shelter_analytics || []).map(s => s.name);
+            const occupied = (data.shelter_analytics || []).map(s => s.occupied);
+            const available = (data.shelter_analytics || []).map(s => s.available);
+
+            chartShelters = new Chart(shCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Occupied Spaces', data: occupied, backgroundColor: '#f97316' },
+                        { label: 'Available Capacity', data: available, backgroundColor: '#22c55e' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true, ticks: { color: '#94a3b8' }, grid: { color: '#16365c' } },
+                        y: { stacked: true, ticks: { color: '#94a3b8' }, grid: { color: '#16365c' } }
+                    },
+                    plugins: { legend: { labels: { color: '#cbd5e1' } } }
+                }
+            });
+        }
+
+        // Chart E: Influx Timeline (Line)
+        const tCtx = document.getElementById("chartTimelineCanvas");
+        if (tCtx) {
+            if (chartTimeline) chartTimeline.destroy();
+            const dates = (data.requests_timeline || []).map(t => t.date);
+            const counts = (data.requests_timeline || []).map(t => t.count);
+
+            chartTimeline = new Chart(tCtx, {
+                type: 'line',
+                data: {
+                    labels: dates.length ? dates : ['Today'],
+                    datasets: [{
+                        label: 'Requests Submitted',
+                        data: counts.length ? counts : [0],
+                        borderColor: '#168fff',
+                        backgroundColor: 'rgba(22, 143, 255, 0.15)',
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#60a5fa'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#16365c' } },
+                        y: { ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: '#16365c' } }
+                    },
+                    plugins: { legend: { labels: { color: '#cbd5e1' } } }
+                }
+            });
+        }
+
+        // Also fetch and plot Open-Meteo rainfall
+        loadRainfallForecastChart();
+
+    } catch (e) {
+        console.error("Analytics chart render failure:", e);
+    }
+}
+
+async function loadRainfallForecastChart() {
+    try {
+        const resp = await fetch("/api/weather?city=Coimbatore");
+        const data = await resp.json();
+        if (!data.success || !data.hourly_forecast) return;
+
+        const hourly = data.hourly_forecast;
+        const times = (hourly.time || []).slice(0, 12).map(t => t.split("T")[1] || t);
+        const rain = (hourly.precipitation || []).slice(0, 12);
+
+        const rCtx = document.getElementById("chartRainfallCanvas");
+        if (rCtx) {
+            if (chartRainfall) chartRainfall.destroy();
+            chartRainfall = new Chart(rCtx, {
+                type: 'bar',
+                data: {
+                    labels: times,
+                    datasets: [{
+                        label: 'Precipitation (mm)',
+                        data: rain,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#16365c' } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#16365c' } }
+                    },
+                    plugins: { legend: { labels: { color: '#cbd5e1' } } }
+                }
+            });
+        }
+    } catch (e) {}
+}
+
+
+/* =========================================================
+   CITIZEN REQUEST SUBMISSION & DATA
+========================================================= */
+
+async function submitRequest() {
+    const location = document.getElementById("reqLocation").value.trim();
+    const phone = document.getElementById("reqPhone").value.trim();
+    const people = parseInt(document.getElementById("reqPeople").value || "1");
+    const flood_level = parseInt(document.getElementById("reqFlood").value || "1");
+    const details = document.getElementById("reqDetails").value.trim();
+
+    const latitude = document.getElementById("reqLatitude").value.trim() || null;
+    const longitude = document.getElementById("reqLongitude").value.trim() || null;
+    const location_accuracy = document.getElementById("reqAccuracy").value.trim() || null;
+
+    const medical_urgent = document.getElementById("reqMedicalUrgent").checked;
+    const elderly_count = parseInt(document.getElementById("reqElderly").value || "0");
+    const children_count = parseInt(document.getElementById("reqChildren").value || "0");
+    const disability_count = parseInt(document.getElementById("reqDisability").value || "0");
+    const assistance_notes = document.getElementById("reqAssistanceNotes").value.trim();
+
+    const msgEl = document.getElementById("requestMessage");
+
+    if (!location) {
+        msgEl.textContent = "Please enter your street location.";
+        msgEl.className = "message error";
+        return;
+    }
+    if (!phone) {
+        msgEl.textContent = "Emergency phone number is required.";
+        msgEl.className = "message error";
+        return;
+    }
+
+    try {
+        const resp = await fetch("/create-request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                location, phone, people, flood_level, details,
+                latitude, longitude, location_accuracy,
+                medical_urgent, elderly_count, children_count,
+                disability_count, assistance_notes
+            })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            msgEl.textContent = `Case #${data.request_id} submitted with Triage Priority: ${data.priority} (Score: ${Math.round(data.priority_score)}). Administrator notified.`;
+            msgEl.className = "message success";
+            document.getElementById("reqDetails").value = "";
+            document.getElementById("reqAssistanceNotes").value = "";
+            loadCitizenRequests();
+        } else {
+            msgEl.textContent = data.message || "Submission failed.";
+            msgEl.className = "message error";
+        }
+    } catch (err) {
+        msgEl.textContent = "Network error submitting emergency request.";
+        msgEl.className = "message error";
+    }
+}
+
+async function loadCitizenData() {
+    loadCitizenRequests();
+    loadNotifications();
+}
+
+async function loadCitizenRequests() {
+    const box = document.getElementById("citizenRequests");
+    if (!box) return;
+
+    try {
+        const resp = await fetch("/my-requests");
+        const data = await resp.json();
+        if (!data.success || !data.requests || data.requests.length === 0) {
+            box.innerHTML = `<div class="empty">You have no active emergency requests submitted.</div>`;
+            return;
+        }
+
+        box.innerHTML = data.requests.map(req => {
+            const hasGps = (req.latitude && req.longitude);
+            const medBadge = req.medical_urgent ? `<span class="vuln-badge medical">🚨 Urgent Medical</span>` : "";
+            const eldBadge = req.elderly_count > 0 ? `<span class="vuln-badge elderly">👴 ${req.elderly_count} Elderly</span>` : "";
+            const chdBadge = req.children_count > 0 ? `<span class="vuln-badge children">👶 ${req.children_count} Children</span>` : "";
+            const disBadge = req.disability_count > 0 ? `<span class="vuln-badge disability">♿ ${req.disability_count} Mobility</span>` : "";
+
+            return `
+                <div class="request-card">
+                    <div class="request-top">
+                        <div>
+                            <div class="case-id">CASE #${req.id}</div>
+                            <h3>${escapeHtml(req.location)}</h3>
+                        </div>
+                        <span class="priority ${priorityClass(req.priority)}">
+                            ${req.priority} (${Math.round(req.priority_score || 0)} pts)
+                        </span>
+                    </div>
+
+                    <div style="margin: 6px 0 10px 0;">
+                        ${medBadge} ${eldBadge} ${chdBadge} ${disBadge}
+                    </div>
+
+                    <div class="info-grid">
+                        <div><small>Status</small><strong class="status ${statusClass(req.status)}">${req.status}</strong></div>
+                        <div><small>People Affected</small><strong>👥 ${req.people}</strong></div>
+                        <div><small>Reported Water</small><strong>🌊 Level ${req.flood_level}/5</strong></div>
+                        <div><small>GPS Lock</small><strong>${hasGps ? '📍 Coordinates Attached' : 'Manual Address'}</strong></div>
+                    </div>
+
+                    <div class="assignment">
+                        <p><span>Assigned Fleet:</span> <b>${escapeHtml(req.assigned_team || 'Pending dispatch')}</b></p>
+                        <p><span>Shelter Assigned:</span> <b>${escapeHtml(req.shelter || 'Pending assignment')}</b></p>
+                    </div>
+
+                    ${req.priority_reasons ? `<p style="font-size:12px; color:#8da4bf; margin:8px 0 0 0;"><b>Triage Factors:</b> ${escapeHtml(req.priority_reasons)}</p>` : ''}
+
+                    <div class="action-row" style="margin-top:14px;">
+                        ${hasGps ? `
+                            <button class="primary-btn" onclick="openEvacuationRoute(${req.id})">
+                                🗺️ View Evacuation Route
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join("");
+
+    } catch (e) {
+        box.innerHTML = `<p>Unable to load requests.</p>`;
+    }
+}
+
+async function loadNotifications() {
+    const box = document.getElementById("citizenNotifications");
+    if (!box) return;
+
+    try {
+        const resp = await fetch("/notifications");
+        const data = await resp.json();
+        if (!data.success || !data.notifications || data.notifications.length === 0) {
+            box.innerHTML = `<div class="empty">No notifications yet.</div>`;
+            return;
+        }
+
+        box.innerHTML = data.notifications.map(n => `
+            <div class="notification-item" style="background:#09203a; border:1px solid #1c456f; border-radius:12px; padding:12px 16px; margin-bottom:10px;">
+                <p style="margin:0 0 4px 0; color:#e2edfa; font-size:13.5px;">${escapeHtml(n.message)}</p>
+                <small style="color:#64748b; font-size:11px;">${n.created_at}</small>
+            </div>
+        `).join("");
+    } catch (e) {}
+}
+
+async function markAllNotificationsRead() {
+    try {
+        await fetch("/notifications/mark-read", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({})
+        });
+        loadNotifications();
+    } catch (e) {}
+}
+
+
+/* =========================================================
+   ADMINISTRATOR DASHBOARD DATA & ACTIONS
+========================================================= */
+
+async function loadAdminData() {
+    loadAdminStats();
+    loadAdminRequests();
+    loadAdminTeams();
+    loadAdminShelters();
+}
+
+async function loadAdminStats() {
+    try {
+        const resp = await fetch("/admin/stats");
+        const data = await resp.json();
+        if (data.success) {
+            document.getElementById("statTotal").innerText = data.total;
+            document.getElementById("statPending").innerText = data.pending;
+            document.getElementById("statProgress").innerText = data.progress;
+            document.getElementById("statRescued").innerText = data.rescued;
+            document.getElementById("statAvailableTeams").innerText = data.available_teams;
+        }
+    } catch (e) {}
+}
+
+async function loadAdminRequests() {
+    const box = document.getElementById("adminRequests");
+    if (!box) return;
+
+    try {
+        const resp = await fetch("/admin/requests");
+        const data = await resp.json();
+        if (!data.success || !data.requests || data.requests.length === 0) {
+            box.innerHTML = `<div class="empty">No emergency cases in queue.</div>`;
+            return;
+        }
+
+        box.innerHTML = data.requests.map(req => adminRequestCard(req)).join("");
+    } catch (e) {
+        box.innerHTML = `<p>Unable to load emergency queue.</p>`;
+    }
+}
+
+function adminRequestCard(request) {
+    const pending = request.status === "Pending";
+    const hasGps = (request.latitude && request.longitude);
+
+    const medBadge = request.medical_urgent ? `<span class="vuln-badge medical">🚨 Urgent Medical</span>` : "";
+    const eldBadge = request.elderly_count > 0 ? `<span class="vuln-badge elderly">👴 ${request.elderly_count} Elderly</span>` : "";
+    const chdBadge = request.children_count > 0 ? `<span class="vuln-badge children">👶 ${request.children_count} Children</span>` : "";
+    const disBadge = request.disability_count > 0 ? `<span class="vuln-badge disability">♿ ${request.disability_count} Mobility</span>` : "";
+
+    return `
+        <div class="request-card admin-request">
+            <div class="request-top">
+                <div>
+                    <div class="case-id">EMERGENCY CASE #${request.id}</div>
+                    <h3>${escapeHtml(request.citizen_name)}</h3>
+                </div>
+                <span class="priority ${priorityClass(request.priority)}">
+                    ${request.priority} (${Math.round(request.priority_score || 0)} pts)
+                </span>
+            </div>
+
+            <div style="margin: 6px 0 10px 0;">
+                ${medBadge} ${eldBadge} ${chdBadge} ${disBadge}
+            </div>
+
+            <div class="info-grid">
+                <div><small>Location</small><strong>📍 ${escapeHtml(request.location)}</strong></div>
+                <div><small>People</small><strong>👥 ${request.people}</strong></div>
+                <div><small>Flood Level</small><strong>🌊 Level ${request.flood_level}/5</strong></div>
+                <div><small>Emergency Phone</small><strong>☎ ${escapeHtml(request.phone)}</strong></div>
+            </div>
+
+            ${request.details ? `
+                <div class="details">
+                    <strong>Situation Details:</strong>
+                    <p>${escapeHtml(request.details)}</p>
+                </div>
+            ` : ''}
+
+            ${request.assistance_notes ? `
+                <div class="details" style="background:rgba(239, 68, 68, 0.08); border-left:3px solid #ef4444;">
+                    <strong style="color:#fca5a5;">Special Medical/Assistance Details:</strong>
+                    <p>${escapeHtml(request.assistance_notes)}</p>
+                </div>
+            ` : ''}
+
+            ${request.priority_reasons ? `
+                <div style="font-size:12px; color:#8da4bf; margin:8px 0;">
+                    <b>Priority Scoring Factors:</b> ${escapeHtml(request.priority_reasons)}
+                </div>
+            ` : ''}
+
+            <div class="assignment">
+                <p><span>Rescue Fleet:</span> <b>${escapeHtml(request.assigned_team || "Not assigned")}</b></p>
+                <p><span>Shelter Center:</span> <b>${escapeHtml(request.shelter || "Not assigned")}</b></p>
+                <p><span>Status:</span> <b class="status ${statusClass(request.status)}">${request.status}</b></p>
+            </div>
+
+            <div class="action-row">
+                ${pending ? `
+                    <button class="primary-btn" onclick="assignTeam(${request.id})">
+                        ✓ Accept & Deploy Team
+                    </button>
+                ` : ''}
+
+                ${(!request.shelter && request.status !== "Cancelled") ? `
+                    <button class="secondary-btn" onclick="assignShelter(${request.id})">
+                        🏠 Assign Shelter
+                    </button>
+                ` : ''}
+
+                ${hasGps ? `
+                    <button class="secondary-btn" onclick="openEvacuationRoute(${request.id})">
+                        🗺️ Route Planner
+                    </button>
+                ` : ''}
+
+                ${(request.status !== "Rescued" && request.status !== "Cancelled") ? `
+                    <button class="cancel-btn" onclick="cancelCase(${request.id})">
+                        Cancel Case
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+async function assignTeam(requestId, teamId = null) {
+    try {
+        const payload = teamId ? { team_id: teamId } : {};
+        const resp = await fetch(`/admin/assign-team/${requestId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok) {
+            const err = (data && data.message) ? data.message : `HTTP ${resp.status}: Could not complete assignment.`;
+            alert(`Assignment Alert: ${err}`);
+            return;
+        }
+        if (data && data.success) {
+            alert(data.message || "Rescue team assigned and deployed successfully!");
+            loadAdminData();
+        } else {
+            alert((data && data.message) || "Assignment could not be completed.");
+        }
+    } catch (e) {
+        console.error("assignTeam network failure:", e);
+        alert(`Communication Error: Unable to contact server. (${e.message})`);
+    }
+}
+
+async function assignShelter(requestId, shelterId = null) {
+    try {
+        const payload = shelterId ? { shelter_id: shelterId } : {};
+        const resp = await fetch(`/admin/assign-shelter/${requestId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok) {
+            const err = (data && data.message) ? data.message : `HTTP ${resp.status}: Could not allocate shelter.`;
+            alert(`Shelter Allocation Alert: ${err}`);
+            return;
+        }
+        if (data && data.success) {
+            alert(data.message || "Evacuation shelter assigned successfully!");
+            loadAdminData();
+        } else {
+            alert((data && data.message) || "Shelter assignment failed.");
+        }
+    } catch (e) {
+        console.error("assignShelter network failure:", e);
+        alert(`Communication Error: Unable to contact server. (${e.message})`);
+    }
+}
+
+async function cancelCase(requestId) {
+    if (!confirm(`Are you sure you want to cancel Emergency Request #${requestId}? This will release any assigned teams and shelter allocations.`)) {
+        return;
+    }
+    try {
+        const resp = await fetch(`/admin/cancel/${requestId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({})
+        });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok) {
+            const err = (data && data.message) ? data.message : `HTTP ${resp.status}: Could not cancel case.`;
+            alert(`Cancellation Alert: ${err}`);
+            return;
+        }
+        alert((data && data.message) || `Emergency case #${requestId} cancelled.`);
+        loadAdminData();
+    } catch (e) {
+        console.error("cancelCase network failure:", e);
+        alert(`Communication Error: Unable to contact server. (${e.message})`);
+    }
+}
+
+async function loadAdminTeams() {
+    const box = document.getElementById("adminTeams");
+    if (!box) return;
+
+    try {
+        const resp = await fetch("/admin/teams");
+        const data = await resp.json();
+        if (!data.success || !data.teams) return;
+
+        box.innerHTML = data.teams.map(team => {
+            const beaconTag = team.is_live_gps
+                ? `<span class="live-beacon-pill">📡 Live GPS Beacon</span>`
+                : `<span class="base-station-pill">🏢 Base Station (Predefined)</span>`;
+
+            return `
+                <div class="mini-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <h3 style="margin:0;">🚒 ${escapeHtml(team.team_name)}</h3>
+                        ${beaconTag}
+                    </div>
+                    <p><b>Station / Base:</b> ${escapeHtml(team.location)}</p>
+                    <p><b>Status:</b> <span class="status ${statusClass(team.status)}">${team.status}</span></p>
+                    <p><b>Coordinates:</b> ${team.latitude && team.longitude ? `${team.latitude.toFixed(4)}, ${team.longitude.toFixed(4)}` : 'Base Coordinates'}</p>
+                    <p><b>Radio / Phone:</b> ${escapeHtml(team.phone || 'Emergency Comms')}</p>
+                    ${team.last_location_update ? `<p><small style="color:#94a3b8;">Telemetry: ${escapeHtml(team.last_location_update)}</small></p>` : ''}
+                </div>
+            `;
+        }).join("");
+    } catch (e) {}
+}
+
+async function loadAdminShelters() {
+    const box = document.getElementById("adminShelters");
+    if (!box) return;
+
+    try {
+        const resp = await fetch("/admin/shelters");
+        const data = await resp.json();
+        if (!data.success || !data.shelters) return;
+
+        box.innerHTML = data.shelters.map(shelter => {
+            const pct = shelter.occupancy_pct || 0;
+            let fillColor = "#22c55e";
+            if (pct >= 85) fillColor = "#ef4444";
+            else if (pct >= 60) fillColor = "#eab308";
+
+            const verifiedBadge = shelter.is_verified
+                ? `<span style="color:#86efac; font-size:11px; font-weight:600;">✓ Verified Operational</span>`
+                : `<span class="candidate-badge">⚠️ Candidate / Unverified</span>`;
+
+            return `
+                <div class="mini-card">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                        <h3 style="margin:0;">🏠 ${escapeHtml(shelter.name)}</h3>
+                        ${verifiedBadge}
+                    </div>
+                    <p><b>Location:</b> ${escapeHtml(shelter.location)}</p>
+                    <div class="capacity-progress-bg">
+                        <div class="capacity-progress-fill" style="width: ${Math.min(100, pct)}%; background: ${fillColor};"></div>
+                    </div>
+                    <p><b>Occupancy:</b> ${shelter.occupied} / ${shelter.capacity} (${pct}%)</p>
+                    <p><b>Available Spaces:</b> <span style="color:#86efac; font-weight:bold;">${shelter.available}</span></p>
+                    <p><b>Hotline:</b> ${escapeHtml(shelter.contact_phone || 'Emergency Line 112')}</p>
+                    <p><small style="color:#64748b;">Source: ${escapeHtml(shelter.source || 'Database')}</small></p>
+                </div>
+            `;
+        }).join("");
+    } catch (e) {}
+}
+
+
+/* =========================================================
+   RESCUE TEAM OPERATIONS
+========================================================= */
+
+async function loadRescueData() {
+    const box = document.getElementById("rescueRequests");
+    if (!box) return;
+
+    try {
+        const resp = await fetch("/rescue/requests");
+        const data = await resp.json();
+        if (!data.success || !data.requests || data.requests.length === 0) {
+            box.innerHTML = `<div class="empty">No emergency operations currently assigned to your team.</div>`;
+            return;
+        }
+
+        box.innerHTML = data.requests.map(req => {
+            const hasGps = (req.latitude && req.longitude);
+            const medBadge = req.medical_urgent ? `<span class="vuln-badge medical">🚨 Urgent Medical</span>` : "";
+            const eldBadge = req.elderly_count > 0 ? `<span class="vuln-badge elderly">👴 ${req.elderly_count} Elderly</span>` : "";
+            const chdBadge = req.children_count > 0 ? `<span class="vuln-badge children">👶 ${req.children_count} Children</span>` : "";
+            const disBadge = req.disability_count > 0 ? `<span class="vuln-badge disability">♿ ${req.disability_count} Mobility</span>` : "";
+
+            return `
+                <div class="request-card">
+                    <div class="request-top">
+                        <div>
+                            <div class="case-id">OPERATION CASE #${req.id}</div>
+                            <h3>${escapeHtml(req.citizen_name)}</h3>
+                        </div>
+                        <span class="status ${statusClass(req.status)}">${req.status}</span>
+                    </div>
+
+                    <div style="margin: 6px 0 10px 0;">
+                        ${medBadge} ${eldBadge} ${chdBadge} ${disBadge}
+                    </div>
+
+                    <div class="info-grid">
+                        <div><small>Location</small><strong>📍 ${escapeHtml(req.location)}</strong></div>
+                        <div><small>People</small><strong>👥 ${req.people}</strong></div>
+                        <div><small>Flood Level</small><strong>🌊 Level ${req.flood_level}/5</strong></div>
+                        <div><small>Emergency Contact</small><strong>☎ ${escapeHtml(req.phone)}</strong></div>
+                    </div>
+
+                    ${req.details ? `<div class="details"><strong>Details:</strong><p>${escapeHtml(req.details)}</p></div>` : ''}
+                    ${req.assistance_notes ? `<div class="details" style="background:rgba(239, 68, 68, 0.08);"><strong style="color:#fca5a5;">Special Medical/Assistance:</strong><p>${escapeHtml(req.assistance_notes)}</p></div>` : ''}
+
+                    <div class="assignment">
+                        <p><span>Designated Shelter:</span> <b>${escapeHtml(req.shelter || "Not assigned")}</b></p>
+                    </div>
+
+                    <div class="action-row" style="margin-top:14px;">
+                        ${req.status === "Assigned" ? `
+                            <button class="primary-btn" onclick="updateRescue(${req.id}, 'In Progress')">
+                                🚑 Start Transit & Rescue
+                            </button>
+                        ` : ''}
+
+                        ${req.status === "In Progress" ? `
+                            <button class="success-btn" onclick="promptRescueCompletion(${req.id})">
+                                ✓ Mark Rescued & Secured
+                            </button>
+                        ` : ''}
+
+                        ${hasGps ? `
+                            <button class="secondary-btn" onclick="openEvacuationRoute(${req.id})">
+                                🗺️ Mission Route
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join("");
+
+    } catch (e) {
+        box.innerHTML = `<p>Error loading assigned operations.</p>`;
+    }
+}
+
+async function updateRescue(id, status, notes = "") {
+    try {
+        const resp = await fetch(`/rescue/update/${id}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status, completion_notes: notes })
+        });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok) {
+            const err = (data && data.message) ? data.message : `HTTP ${resp.status}: Could not update operation status.`;
+            alert(`Rescue Operation Alert: ${err}`);
+            return;
+        }
+        alert((data && data.message) || `Status updated to ${status}.`);
+        loadRescueData();
+    } catch (e) {
+        console.error("updateRescue network failure:", e);
+        alert(`Communication Error: Unable to contact server. (${e.message})`);
+    }
+}
+
+function promptRescueCompletion(id) {
+    const notes = prompt("Enter operation completion remarks (e.g. 'All 4 individuals safely relocated to RS Puram shelter'):") || "";
+    updateRescue(id, "Rescued", notes);
+}
+
+
+/* =========================================================
+   LIVE WEATHER REPORT (OPEN-METEO)
+========================================================= */
+
+async function loadLiveWeather(force = false) {
+    const city = document.getElementById("weatherCity")?.value?.trim() || "Coimbatore";
+    const msg = document.getElementById("weatherMessage");
+    if (msg) {
+        msg.textContent = `Querying live telemetry for ${city}...`;
+        msg.className = "message";
+    }
+
+    try {
+        const resp = await fetch(`/api/weather?city=${encodeURIComponent(city)}`);
+        const data = await resp.json();
+        if (!data.success) {
+            if (msg) { msg.textContent = data.message || "Failed to load weather."; msg.className = "message error"; }
+            return;
+        }
+
+        const setVal = (id, val, unit = "") => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = (val !== undefined && val !== null) ? `${val}${unit}` : "Unavailable";
+        };
+
+        setVal("weatherTemperature", data.temperature_c, " °C");
+        setVal("weatherHumidity", data.humidity_percent, " %");
+        setVal("weatherWind", data.wind_speed_kmh, " km/h");
+        setVal("weatherRain", data.precipitation_mm, " mm/hr");
+
+        const hourlyEl = document.getElementById("weatherHourly");
+        if (hourlyEl && data.hourly_forecast && data.hourly_forecast.time) {
+            const h = data.hourly_forecast;
+            hourlyEl.innerHTML = `
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead>
+                            <tr style="border-bottom:1px solid #1c456f; text-align:left;">
+                                <th style="padding:8px;">Time</th>
+                                <th style="padding:8px;">Precipitation (mm)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${h.time.slice(0, 8).map((t, idx) => `
+                                <tr style="border-bottom:1px solid #102d4d;">
+                                    <td style="padding:8px; color:#94a3b8;">${t.replace("T", " ")}</td>
+                                    <td style="padding:8px; font-weight:bold; color:#60a5fa;">${h.precipitation[idx] ?? 0} mm</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        const updatedEl = document.getElementById("weatherUpdatedAt");
+        if (updatedEl) {
+            updatedEl.textContent = `Telemetry updated: ${data.weather_time || new Date().toLocaleTimeString()} (Open-Meteo). 24h Projected: ${data.precipitation_24h_sum_mm || 0} mm.`;
+        }
+
+        if (msg) {
+            msg.textContent = `Live telemetry active for ${data.location || city}.`;
+            msg.className = "message success";
+        }
+
+    } catch (e) {
+        if (msg) {
+            msg.textContent = "Telemetry unreachable. Check network connection.";
+            msg.className = "message error";
+        }
+    }
+}
+
+
+/* =========================================================
+   FEATURE: DYNAMIC LOCATION SEARCH & OSM SHELTER DISCOVERY
+========================================================= */
+
+let locationSearchTimer = null;
+
+function handleLocationSearchInput(val) {
+    clearTimeout(locationSearchTimer);
+    const dropdown = document.getElementById("locationSearchResults");
+    const latInput = document.getElementById("reqLatitude");
+    const lonInput = document.getElementById("reqLongitude");
+    const accInput = document.getElementById("reqAccuracy");
+    const statusEl = document.getElementById("gpsStatusBadge");
+    const coordsEl = document.getElementById("gpsCoordsDisplay");
+
+    // Clear stale coordinates whenever the user types a fresh address manually
+    if (latInput) latInput.value = "";
+    if (lonInput) lonInput.value = "";
+    if (accInput) accInput.value = "";
+    if (statusEl) {
+        statusEl.textContent = "Manual Address Entry";
+        statusEl.className = "gps-status manual";
+    }
+    if (coordsEl) {
+        coordsEl.innerHTML = `<span>Select a location from suggestions below or submit to auto-verify coordinates.</span>`;
+    }
+
+    if (!dropdown) return;
+    if (!val || val.trim().length < 2) {
+        dropdown.classList.add("hidden");
+        dropdown.innerHTML = "";
+        return;
+    }
+
+    locationSearchTimer = setTimeout(async () => {
+        try {
+            const resp = await fetch(`/api/location/search?q=${encodeURIComponent(val.trim())}`);
+            const data = await resp.json();
+            if (!data.success || !data.results || data.results.length === 0) {
+                dropdown.classList.add("hidden");
+                return;
+            }
+
+            dropdown.innerHTML = data.results.map(r => `
+                <div class="location-item" onclick="selectLocationResult(${JSON.stringify(r.display_name)}, ${r.latitude}, ${r.longitude})">
+                    <strong>📍 ${escapeHtml(r.name)}</strong>
+                    <small style="display:block; color:#94a3b8; font-size:11px;">${escapeHtml(r.display_name)}</small>
+                </div>
+            `).join("");
+            dropdown.classList.remove("hidden");
+        } catch (e) {
+            console.error("Location search error:", e);
+        }
+    }, 300);
+}
+
+function selectLocationResult(displayName, lat, lon) {
+    const locInput = document.getElementById("reqLocation");
+    const latInput = document.getElementById("reqLatitude");
+    const lonInput = document.getElementById("reqLongitude");
+    const accInput = document.getElementById("reqAccuracy");
+    const dropdown = document.getElementById("locationSearchResults");
+
+    if (locInput) locInput.value = displayName;
+    if (latInput) latInput.value = lat;
+    if (lonInput) lonInput.value = lon;
+    if (accInput) accInput.value = "manual";
+    if (dropdown) dropdown.classList.add("hidden");
+
+    const statusEl = document.getElementById("gpsStatusBadge");
+    const coordsEl = document.getElementById("gpsCoordsDisplay");
+    if (statusEl) {
+        statusEl.textContent = "Manually Selected Location";
+        statusEl.className = "gps-status manual";
+    }
+    if (coordsEl) {
+        coordsEl.innerHTML = `
+            <span><b>Latitude:</b> ${lat.toFixed(5)}</span>
+            <span><b>Longitude:</b> ${lon.toFixed(5)}</span>
+            <span style="color:#93c5fd; font-weight:600;">📍 Manually selected location: ${escapeHtml(displayName)}</span>
+        `;
+    }
+
+    if (citizenMap) {
+        citizenMap.setView([lat, lon], 14);
+    }
+}
+
+document.addEventListener("click", (e) => {
+    const dropdown = document.getElementById("locationSearchResults");
+    const locInput = document.getElementById("reqLocation");
+    if (dropdown && !dropdown.contains(e.target) && e.target !== locInput) {
+        dropdown.classList.add("hidden");
+    }
+});
+
+function openDiscoverSheltersModal() {
+    const modal = document.getElementById("discoverSheltersModal");
+    if (modal) modal.classList.remove("hidden");
+}
+
+function closeDiscoverSheltersModal() {
+    const modal = document.getElementById("discoverSheltersModal");
+    if (modal) modal.classList.add("hidden");
+}
+
+async function executeDiscoverShelters() {
+    const input = document.getElementById("discoverLocInput").value.trim();
+    const radius = document.getElementById("discoverRadiusInput").value;
+    const container = document.getElementById("discoverResultsContainer");
+    const statusMsg = document.getElementById("discoverStatusMsg");
+
+    if (!input) {
+        alert("Please enter a location name (e.g. Chennai, Bengaluru) or GPS coordinates (lat, lon).");
+        return;
+    }
+
+    container.innerHTML = `<p style="text-align:center; color:#93c5fd; padding:15px;">Scanning OpenStreetMap for civic facilities within ${radius} km...</p>`;
+    statusMsg.innerText = "Querying live geospatial registry...";
+
+    let lat = null;
+    let lon = null;
+
+    // Check if input is "lat, lon"
+    const coordParts = input.split(",").map(p => p.trim());
+    if (coordParts.length === 2 && !isNaN(parseFloat(coordParts[0])) && !isNaN(parseFloat(coordParts[1]))) {
+        lat = parseFloat(coordParts[0]);
+        lon = parseFloat(coordParts[1]);
+    } else {
+        // Resolve text location via geocoding
+        try {
+            const geoResp = await fetch(`/api/location/search?q=${encodeURIComponent(input)}`);
+            const geoData = await geoResp.json();
+            if (geoData.success && geoData.results && geoData.results.length > 0) {
+                lat = geoData.results[0].latitude;
+                lon = geoData.results[0].longitude;
+                statusMsg.innerText = `Resolved '${input}' to (${lat.toFixed(4)}, ${lon.toFixed(4)}). Scanning amenities...`;
+            } else {
+                container.innerHTML = `<p style="color:#f87171; text-align:center;">Could not resolve location '${escapeHtml(input)}'. Please enter a valid city or coordinates.</p>`;
+                statusMsg.innerText = "";
+                return;
+            }
+        } catch (e) {
+            container.innerHTML = `<p style="color:#f87171; text-align:center;">Geocoding error: ${escapeHtml(e.message)}</p>`;
+            return;
+        }
+    }
+
+    try {
+        const resp = await fetch(`/api/shelters/discover?latitude=${lat}&longitude=${lon}&radius_km=${radius}`);
+        const data = await resp.json();
+
+        if (!data.success) {
+            container.innerHTML = `<p style="color:#f87171; text-align:center;">${escapeHtml(data.message || 'Discovery failed.')}</p>`;
+            return;
+        }
+
+        statusMsg.innerHTML = `Found <b>${data.count}</b> candidate buildings via ${escapeHtml(data.source)}. <small style="color:#fde047;">All candidates are unverified and require capacity verification before operational use.</small>`;
+
+        if (data.candidates.length === 0) {
+            container.innerHTML = `<p style="text-align:center; color:#94a3b8; padding:20px;">No unverified civic facilities found within ${radius} km. Try expanding the scan radius.</p>`;
+            return;
+        }
+
+        container.innerHTML = data.candidates.map(c => `
+            <div class="candidate-shelter-card">
+                <div class="candidate-shelter-info">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <h4>🏛️ ${escapeHtml(c.name)}</h4>
+                        <span class="candidate-badge">Unverified Candidate</span>
+                    </div>
+                    <p><b>Amenity Type:</b> ${escapeHtml(c.amenity_type)} | <b>Proximity:</b> ${c.distance_km} km away</p>
+                    <p><b>Address / Suburb:</b> ${escapeHtml(c.address)}</p>
+                    <p style="color:#64748b; font-size:11px;">Source: ${escapeHtml(c.source)} (${c.latitude}, ${c.longitude})</p>
+                </div>
+                <div>
+                    <button type="button" class="primary-btn" style="padding:6px 12px; font-size:12px; white-space:nowrap;"
+                        onclick="promptVerifyShelter(${JSON.stringify(c.name)}, ${c.latitude}, ${c.longitude}, ${JSON.stringify(c.amenity_type)}, ${JSON.stringify(c.address)})">
+                        ✓ Verify & Activate
+                    </button>
+                </div>
+            </div>
+        `).join("");
+
+    } catch (e) {
+        container.innerHTML = `<p style="color:#f87171; text-align:center;">Error contacting discovery service: ${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function promptVerifyShelter(name, lat, lon, amenityType, address) {
+    const rawCapacity = prompt(`Verify Operational Capacity for "${name}":\n\nEnter maximum safe evacuee capacity (e.g. 250):`, "200");
+    if (rawCapacity === null) return;
+    const capacity = parseInt(rawCapacity, 10);
+    if (isNaN(capacity) || capacity < 1) {
+        alert("Please enter a valid positive integer for shelter capacity.");
+        return;
+    }
+
+    const contactPhone = prompt(`Enter Emergency Control / Coordinator Contact Phone for "${name}":`, "+91 44 25000000") || "Emergency Control";
+
+    try {
+        const resp = await fetch("/api/shelters/verify-and-add", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: name,
+                location: address || name,
+                latitude: lat,
+                longitude: lon,
+                capacity: capacity,
+                contact_phone: contactPhone,
+                amenity_type: amenityType
+            })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            alert(`✓ Success! "${name}" verified and registered with operational capacity of ${capacity} evacuees.`);
+            closeDiscoverSheltersModal();
+            loadAdminShelters();
+            refreshInteractiveMap();
+        } else {
+            alert(`Error activating shelter: ${data.message}`);
+        }
+    } catch (e) {
+        alert(`Network error activating shelter: ${e.message}`);
+    }
+}
+
+
+/* =========================================================
+   UTILITIES & SESSION CHECK
+========================================================= */
+
+function statusClass(status) {
+    if (!status) return "";
+    const clean = status.toLowerCase().replace(/\s+/g, "-");
+    return clean;
+}
+
+function priorityClass(priority) {
+    if (!priority) return "low";
+    return priority.toLowerCase();
+}
+
+function escapeHtml(str) {
+    if (str === null || str === undefined) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+async function checkExistingSession() {
+    try {
+        const resp = await fetch("/session");
+        const data = await resp.json();
+        if (data.logged_in) {
+            openDashboard(data.role);
+        }
+    } catch (e) {}
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    checkExistingSession();
+});
+
+</script>
+
+</body>
+</html>
