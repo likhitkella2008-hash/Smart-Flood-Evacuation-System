@@ -65,7 +65,19 @@ def geocode_location(query: str, count: int = 5):
 # =========================================================
 
 def db():
-    connection = sqlite3.connect(DATABASE)
+    turso_url = os.environ.get("TURSO_DATABASE_URL") or os.environ.get("LIBSQL_URL")
+    turso_token = os.environ.get("TURSO_AUTH_TOKEN") or os.environ.get("LIBSQL_AUTH_TOKEN")
+
+    if turso_url:
+        import turso_db
+        return turso_db.connect(turso_url, auth_token=turso_token)
+
+    # Local SQLite with Vercel serverless /tmp fallback protection
+    db_path = DATABASE
+    if os.environ.get("VERCEL") == "1" and not os.path.isabs(db_path):
+        db_path = os.path.join("/tmp", os.path.basename(DATABASE))
+
+    connection = sqlite3.connect(db_path)
     connection.row_factory = sqlite3.Row
     return connection
 
@@ -1787,8 +1799,14 @@ def manage_road_hazards():
 # SERVER RUN ENTRY POINT
 # =========================================================
 
+# Auto-initialize database on application boot (crucial for Vercel serverless)
+try:
+    with app.app_context():
+        init_database()
+except Exception as _boot_err:
+    logger.warning("Database boot auto-initialization notice: %s", _boot_err)
+
 if __name__ == "__main__":
-    init_database()
 
     print()
     print("=" * 68)
