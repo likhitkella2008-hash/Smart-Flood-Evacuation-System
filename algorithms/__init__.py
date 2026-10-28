@@ -6,8 +6,11 @@ Genuine, from-scratch Python implementations of core ADSA algorithms:
 - Merge Sort (Emergency Triage Sorting)
 - Binary Search (Request ID Lookup)
 - Priority Queue / Binary Heap (Triage Emergency Dispatch)
+- Heap Sort (In-Place Tree-Array Sorting)
 - Dijkstra's Algorithm (Disaster Road Shortest Path Routing)
-- Breadth-First Search & Depth-First Search (Reachability & Corridor Analysis)
+- Breadth-First Search (Reachability & Evacuation Wave)
+- Depth-First Search (Corridor & Isolation Analysis)
+- Nearest Resource Selection (Single-Pass Linear Selection)
 """
 
 from algorithms.merge_sort import (
@@ -31,17 +34,27 @@ from algorithms.priority_queue import (
     MinHeap
 )
 
+from algorithms.heap_sort import (
+    heapify,
+    heapify_min,
+    heap_sort,
+    heap_sort_requests
+)
+
 from algorithms.dijkstra import (
     AdjacencyListGraph,
     dijkstra_shortest_path
 )
 
-from algorithms.graph_traversal import (
-    bfs_traversal,
-    dfs_traversal,
-    find_connected_components,
+from algorithms.bfs import (
     ManualQueue,
-    ManualStack
+    bfs_traversal
+)
+
+from algorithms.dfs import (
+    ManualStack,
+    dfs_traversal,
+    find_connected_components
 )
 
 from algorithms.nearest_resource import (
@@ -63,14 +76,18 @@ __all__ = [
     "BinaryHeap",
     "EmergencyPriorityQueue",
     "MinHeap",
+    "heapify",
+    "heapify_min",
+    "heap_sort",
+    "heap_sort_requests",
     "AdjacencyListGraph",
     "dijkstra_shortest_path",
+    "ManualQueue",
     "bfs_traversal",
+    "ManualStack",
     "dfs_traversal",
     "find_connected_components",
     "find_nearest_available_team",
     "find_nearest_suitable_shelter",
     "find_nearest_resource",
-    "ManualQueue",
-    "ManualStack",
 ]

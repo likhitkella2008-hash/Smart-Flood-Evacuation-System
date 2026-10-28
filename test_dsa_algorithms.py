@@ -387,6 +387,25 @@ class TestAppEndpointsIntegration(unittest.TestCase):
         self.assertEqual(page_resp.status_code, 200)
         self.assertIn(b"ADSA Algorithms Laboratory", page_resp.data)
 
+    def test_dsa_source_code_api(self):
+        """Verifies /api/dsa/source-code returns genuine Python files for all algorithms."""
+        resp = self.client.get("/api/dsa/source-code")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data.get("success"))
+        sources = data.get("sources", {})
+        required_algos = ["merge_sort", "binary_search", "priority_queue", "heap_sort", "dijkstra", "bfs", "dfs", "nearest_resource"]
+        for algo in required_algos:
+            self.assertIn(algo, sources)
+            self.assertTrue(len(sources[algo]) > 50)
+
+        # Single algorithm lookup
+        single_resp = self.client.get("/api/dsa/source-code/heap_sort")
+        self.assertEqual(single_resp.status_code, 200)
+        single_data = single_resp.get_json()
+        self.assertTrue(single_data.get("success"))
+        self.assertIn("def heap_sort", single_data.get("code", ""))
+
 
 if __name__ == "__main__":
     unittest.main()

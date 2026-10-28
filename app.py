@@ -20,8 +20,10 @@ from shelter_discovery import discover_potential_shelters, haversine_distance
 from algorithms.merge_sort import merge_sort_requests, merge_sort_by_key, compare_emergency_requests
 from algorithms.binary_search import binary_search_request_by_id, binary_search_ids
 from algorithms.priority_queue import EmergencyPriorityQueue, BinaryHeap, MinHeap
+from algorithms.heap_sort import heap_sort, heap_sort_requests
 from algorithms.dijkstra import AdjacencyListGraph, dijkstra_shortest_path
-from algorithms.graph_traversal import bfs_traversal, dfs_traversal
+from algorithms.bfs import bfs_traversal
+from algorithms.dfs import dfs_traversal
 from algorithms.nearest_resource import find_nearest_available_team, find_nearest_suitable_shelter
 
 logging.basicConfig(
@@ -2185,20 +2187,62 @@ def api_network_connectivity():
     return jsonify(report)
 
 
+@app.route("/api/dsa/source-code", defaults={"algo_name": None})
+@app.route("/api/dsa/source-code/<algo_name>")
+def api_dsa_source_code(algo_name):
+    """
+    Returns the genuine, manual Python source code of ADSA algorithm files
+    directly from disk so the frontend displays 100% genuine backend implementations.
+    """
+    algo_files = {
+        "merge_sort": "algorithms/merge_sort.py",
+        "binary_search": "algorithms/binary_search.py",
+        "priority_queue": "algorithms/priority_queue.py",
+        "heap_sort": "algorithms/heap_sort.py",
+        "dijkstra": "algorithms/dijkstra.py",
+        "bfs": "algorithms/bfs.py",
+        "dfs": "algorithms/dfs.py",
+        "nearest_resource": "algorithms/nearest_resource.py"
+    }
+
+    if algo_name:
+        if algo_name not in algo_files:
+            return jsonify({"success": False, "error": f"Algorithm '{algo_name}' not found."}), 404
+        rel_path = algo_files[algo_name]
+        try:
+            full_path = os.path.join(app.root_path, rel_path)
+            with open(full_path, "r", encoding="utf-8") as f:
+                code_content = f.read()
+            return jsonify({"success": True, "algorithm": algo_name, "filename": rel_path, "code": code_content})
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+
+    sources = {}
+    for key, rel_path in algo_files.items():
+        try:
+            full_path = os.path.join(app.root_path, rel_path)
+            with open(full_path, "r", encoding="utf-8") as f:
+                sources[key] = f.read()
+        except Exception as e:
+            sources[key] = f"# Error reading {rel_path}: {str(e)}"
+
+    return jsonify({"success": True, "sources": sources})
+
+
 @app.route("/api/dsa/demo")
 def api_dsa_demo():
     """
-    Comprehensive Demonstration Endpoint: executes all 5 ADSA algorithms
+    Comprehensive Demonstration Endpoint: executes all 8 ADSA algorithms
     with deterministic, verifiable inputs and outputs.
     """
     # 1. Merge Sort Demonstration
     sample_cases = [
-        {"id": 101, "name": "Ravi", "priority": "Medium", "priority_score": 38.0, "created_at": "2026-10-28 10:00:00"},
-        {"id": 102, "name": "Meena", "priority": "Critical", "priority_score": 85.0, "created_at": "2026-10-28 10:05:00"},
-        {"id": 103, "name": "Suresh", "priority": "Low", "priority_score": 18.0, "created_at": "2026-10-28 09:50:00"},
-        {"id": 104, "name": "Kavitha", "priority": "High", "priority_score": 58.0, "created_at": "2026-10-28 10:12:00"},
-        {"id": 105, "name": "Deepak", "priority": "Critical", "priority_score": 92.0, "created_at": "2026-10-28 10:15:00"},
-        {"id": 106, "name": "Ananya", "priority": "Critical", "priority_score": 85.0, "created_at": "2026-10-28 10:01:00"}
+        {"id": 101, "name": "Ravi", "priority": "Medium", "priority_score": 38.0, "latitude": 11.0168, "longitude": 76.9558, "created_at": "2026-10-28 10:00:00"},
+        {"id": 102, "name": "Meena", "priority": "Critical", "priority_score": 85.0, "latitude": 11.0100, "longitude": 76.9600, "created_at": "2026-10-28 10:05:00"},
+        {"id": 103, "name": "Suresh", "priority": "Low", "priority_score": 18.0, "latitude": 11.0200, "longitude": 76.9700, "created_at": "2026-10-28 09:50:00"},
+        {"id": 104, "name": "Kavitha", "priority": "High", "priority_score": 58.0, "latitude": 11.0050, "longitude": 76.9500, "created_at": "2026-10-28 10:12:00"},
+        {"id": 105, "name": "Deepak", "priority": "Critical", "priority_score": 92.0, "latitude": 11.0180, "longitude": 76.9650, "created_at": "2026-10-28 10:15:00"},
+        {"id": 106, "name": "Ananya", "priority": "Critical", "priority_score": 85.0, "latitude": 11.0120, "longitude": 76.9580, "created_at": "2026-10-28 10:01:00"}
     ]
     sorted_cases = merge_sort_requests(sample_cases)
 
@@ -2217,7 +2261,12 @@ def api_dsa_demo():
     pq_popped = pq_demo.pop()
     pq_heap_after = pq_demo.to_list()
 
-    # 4. Dijkstra Shortest Path Demonstration (Disaster Safe Routing)
+    # 4. Heap Sort Demonstration
+    sample_scores = [64, 34, 25, 12, 22, 11, 90]
+    heap_sorted_scores = heap_sort(list(sample_scores), ascending=True)
+    heap_sorted_reqs, heap_sort_trace = heap_sort_requests(sample_cases, key="priority_score", reverse=True, collect_trace=True)
+
+    # 5. Dijkstra Shortest Path Demonstration (Disaster Safe Routing)
     from routing import build_manual_disaster_graph
     demo_hazards = [{
         "name": "Town Hall Underpass Flooding",
@@ -2231,9 +2280,17 @@ def api_dsa_demo():
     hazard_graph = build_manual_disaster_graph(active_hazards=demo_hazards)
     dijkstra_hazards = dijkstra_shortest_path(hazard_graph, "gandhipuram_hub", "singanallur_hub", collect_trace=True)
 
-    # 5. Graph Traversals: BFS & DFS
+    # 6. Graph Traversals: BFS & DFS
     bfs_result = bfs_traversal(clean_graph, "gandhipuram_hub", max_hops=3, collect_trace=True)
     dfs_result = dfs_traversal(clean_graph, "gandhipuram_hub", target_node="singanallur_hub", collect_trace=True)
+
+    # 7. Nearest Resource Selection Demonstration
+    sample_teams = [
+        {"id": 1, "name": "Coimbatore Fire & Rescue (Team Alpha)", "status": "Available", "latitude": 11.0168, "longitude": 76.9558},
+        {"id": 2, "name": "SDRF Water Wing (Boat Beta)", "status": "Busy", "latitude": 11.0010, "longitude": 76.9600},
+        {"id": 3, "name": "Rapid Medical Response (Team Gamma)", "status": "Available", "latitude": 11.0250, "longitude": 76.9700}
+    ]
+    nearest_team = find_nearest_available_team(sample_cases[0], sample_teams)
 
     return jsonify({
         "success": True,
@@ -2264,6 +2321,15 @@ def api_dsa_demo():
                 "heap_array_length_before": len(pq_heap_before),
                 "heap_array_length_after": len(pq_heap_after)
             },
+            "heap_sort": {
+                "name": "Manual In-Place Heap Sort",
+                "time_complexity": "O(N log N)",
+                "space_complexity": "O(1)",
+                "original_array": sample_scores,
+                "sorted_array": heap_sorted_scores,
+                "sorted_requests_count": len(heap_sorted_reqs),
+                "trace": heap_sort_trace
+            },
             "dijkstra": {
                 "name": "Dijkstra Shortest Path with Binary Min-Heap",
                 "time_complexity": "O((V + E) log V)",
@@ -2279,6 +2345,28 @@ def api_dsa_demo():
                     "distance_km": dijkstra_hazards["distance"],
                     "hazard_alerts": dijkstra_hazards["hazard_alerts"]
                 }
+            },
+            "bfs": {
+                "name": "Breadth-First Search (Level-Order Wave)",
+                "time_complexity": "O(V + E)",
+                "space_complexity": "O(V)",
+                "start_node": "gandhipuram_hub",
+                "wave_order": bfs_result["visited_order"],
+                "hop_distances": bfs_result["hop_distances"]
+            },
+            "dfs": {
+                "name": "Depth-First Search (Corridor & Isolation)",
+                "time_complexity": "O(V + E)",
+                "space_complexity": "O(V)",
+                "start_node": "gandhipuram_hub",
+                "visited_order": dfs_result["visited_order"],
+                "path_to_singanallur": dfs_result["path_to_target"]
+            },
+            "nearest_resource": {
+                "name": "Nearest Resource Linear Selection",
+                "time_complexity": "O(N)",
+                "space_complexity": "O(1)",
+                "assigned_team": nearest_team
             },
             "graph_traversals": {
                 "name": "BFS Level-Order & DFS Depth-First Exploration",

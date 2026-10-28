@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ADSA Algorithm Lab | Smart Flood Rescue System</title>
+    <title>ADSA Algorithms Laboratory | Smart Flood Rescue System</title>
     <style>
         :root {
             --bg-dark: #0a1424;
@@ -18,6 +18,7 @@
             --accent-purple: #a855f7;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
+            --code-bg: #050b14;
             --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
@@ -76,6 +77,12 @@
             font-weight: 600;
         }
 
+        .nav-links {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
         .nav-links a {
             color: var(--accent-blue);
             text-decoration: none;
@@ -83,7 +90,7 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             background: var(--bg-card);
-            font-size: 14px;
+            font-size: 13px;
             transition: all 0.2s ease;
         }
 
@@ -97,24 +104,52 @@
             border: 1px solid var(--border);
             border-radius: 16px;
             padding: 24px;
-            margin-bottom: 28px;
+            margin-bottom: 24px;
         }
 
         .hero-banner h2 {
-            font-size: 26px;
+            font-size: 24px;
             color: #fff;
             margin-bottom: 8px;
         }
 
         .hero-banner p {
             color: var(--text-muted);
-            max-width: 900px;
-            font-size: 15px;
+            max-width: 950px;
+            font-size: 14px;
+        }
+
+        /* Filter Pills */
+        .algo-filter {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 12px;
+            margin-bottom: 24px;
+        }
+
+        .filter-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--accent-blue);
+            color: #000;
+            border-color: var(--accent-blue);
         }
 
         .algo-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
             gap: 24px;
             margin-bottom: 32px;
         }
@@ -123,24 +158,29 @@
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 14px;
-            padding: 20px;
+            padding: 22px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.25);
             display: flex;
             flex-direction: column;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(56,189,248,0.4);
         }
 
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(255,255,255,0.07);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
             padding-bottom: 12px;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .card-title {
             font-size: 18px;
-            font-weight: 600;
+            font-weight: 700;
             color: #fff;
             display: flex;
             align-items: center;
@@ -150,7 +190,7 @@
         .badge {
             font-size: 11px;
             font-weight: 700;
-            padding: 3px 8px;
+            padding: 4px 10px;
             border-radius: 6px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -164,13 +204,14 @@
 
         .complexity-bar {
             display: flex;
-            gap: 16px;
-            background: rgba(0,0,0,0.25);
-            padding: 10px 14px;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: rgba(0,0,0,0.35);
+            padding: 8px 12px;
             border-radius: 8px;
-            font-size: 13px;
-            margin-bottom: 16px;
-            border: 1px solid rgba(255,255,255,0.04);
+            font-size: 12px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
         }
 
         .complexity-bar span {
@@ -181,24 +222,22 @@
             color: #fff;
         }
 
-        .code-box {
-            background: #060c14;
-            border: 1px solid #142840;
-            border-radius: 8px;
-            padding: 12px;
-            font-family: 'Consolas', 'Courier New', monospace;
+        .usage-badge {
             font-size: 12px;
-            color: #cbd5e1;
-            overflow-x: auto;
-            margin-bottom: 16px;
-            max-height: 180px;
+            color: var(--accent-cyan);
+            background: rgba(6,182,212,0.1);
+            border-left: 3px solid var(--accent-cyan);
+            padding: 6px 10px;
+            border-radius: 0 6px 6px 0;
+            margin-bottom: 12px;
+            font-family: monospace;
         }
 
         .btn {
             background: linear-gradient(135deg, #0284c7, #0369a1);
             color: #fff;
             border: none;
-            padding: 9px 16px;
+            padding: 8px 14px;
             border-radius: 8px;
             font-weight: 600;
             font-size: 13px;
@@ -221,13 +260,52 @@
         }
 
         .btn-secondary:hover {
-            background: rgba(255,255,255,0.14);
+            background: rgba(255,255,255,0.15);
+        }
+
+        .btn-code {
+            background: transparent;
+            border: 1px dashed var(--border);
+            color: var(--text-muted);
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-code:hover {
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
+            background: rgba(56,189,248,0.05);
+        }
+
+        .code-container {
+            display: none;
+            background: var(--code-bg);
+            border: 1px solid #142840;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 10px;
+            margin-bottom: 12px;
+            max-height: 250px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .code-container pre {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 11.5px;
+            color: #cbd5e1;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
 
         .input-group {
             display: flex;
             gap: 8px;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
         }
 
         input, select {
@@ -250,9 +328,9 @@
             border-radius: 8px;
             padding: 12px;
             font-size: 13px;
-            max-height: 240px;
+            max-height: 260px;
             overflow-y: auto;
-            margin-top: 12px;
+            margin-top: 10px;
             flex-grow: 1;
         }
 
@@ -286,7 +364,7 @@
             background: rgba(56,189,248,0.04);
             margin-bottom: 4px;
             border-radius: 0 4px 4px 0;
-            font-size: 12px;
+            font-size: 11.5px;
         }
 
         .heap-tree {
@@ -328,29 +406,40 @@
             <div class="brand-icon">⚡</div>
             <div>
                 <h1>ADSA Algorithms Laboratory</h1>
-                <span>SMART FLOOD RESCUE SYSTEM &bull; DATA STRUCTURES ENGINE</span>
+                <span>SMART FLOOD RESCUE SYSTEM &bull; ADVANCED DSA ENGINE</span>
             </div>
         </div>
         <div class="nav-links">
-            <a href="/">← Return to Main Operations Center</a>
-            <a href="/api/dsa/demo" target="_blank">View Raw JSON API (/api/dsa/demo)</a>
+            <a href="/">← Return to Operations Center</a>
+            <a href="/admin/requests">Admin Triage</a>
+            <a href="/api/dsa/demo" target="_blank">Raw JSON Demo API</a>
+            <a href="/api/dsa/source-code" target="_blank">Raw Source Code API</a>
         </div>
     </header>
 
     <div class="hero-banner">
         <h2>Live Verification of Core Computer Science Algorithms</h2>
         <p>
-            This interactive workbench demonstrates genuine Python implementations of 
-            <strong>Recursive Merge Sort</strong>, <strong>Iterative Binary Search</strong>, 
-            <strong>Binary Heap Priority Queue</strong>, <strong>Dijkstra's Shortest Path</strong>, 
-            and <strong>BFS/DFS Graph Traversals</strong> executed directly on flood rescue emergency data.
+            Every algorithm below is written manually from scratch in Python following strict textbook ADSA conventions
+            (explicit loops, recursion, index math, and temporary variable swaps).
+            No algorithm logic is delegated to built-in functions like <code>sorted()</code> or libraries like <code>heapq</code> or <code>networkx</code>.
         </p>
     </div>
 
-    <div class="algo-grid">
+    <!-- FILTER BUTTONS -->
+    <div class="algo-filter">
+        <button class="filter-btn active" onclick="filterCards('all')">All Algorithms (8)</button>
+        <button class="filter-btn" onclick="filterCards('sorting')">Sorting (Merge & Heap)</button>
+        <button class="filter-btn" onclick="filterCards('searching')">Searching (Binary Search)</button>
+        <button class="filter-btn" onclick="filterCards('heaps')">Heaps & Priority Queues</button>
+        <button class="filter-btn" onclick="filterCards('graphs')">Graphs (Dijkstra, BFS, DFS)</button>
+        <button class="filter-btn" onclick="filterCards('selection')">Selection (Nearest Resource)</button>
+    </div>
+
+    <div class="algo-grid" id="algoCardsGrid">
 
         <!-- 1. MERGE SORT -->
-        <div class="card">
+        <div class="card" data-category="sorting">
             <div class="card-header">
                 <div class="card-title">
                     <span>🔀 1. Recursive Merge Sort</span>
@@ -361,26 +450,33 @@
             <div class="complexity-bar">
                 <div><span>Time:</span> <strong>O(N log N)</strong> (Best/Avg/Worst)</div>
                 <div><span>Space:</span> <strong>O(N)</strong> auxiliary</div>
-                <div><span>Type:</span> <strong>Stable Divide & Conquer</strong></div>
+                <div><span>Type:</span> <strong>Divide & Conquer (Stable)</strong></div>
+            </div>
+
+            <div class="usage-badge">
+                📍 Used in: app.py:admin_requests() & shelter_discovery.py:235
             </div>
 
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
                 Orders rescue requests strictly by priority category (Critical &gt; High &gt; Medium &gt; Low), 
-                descending numerical score, with deterministic tie-breaking. Implemented without Python's <code>sorted()</code> or SQL <code>ORDER BY</code>.
+                descending numerical score, with deterministic tie-breaking.
             </p>
 
-            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                <button class="btn" onclick="runMergeSortDemo()">⚡ Run Merge Sort on Active Requests</button>
+            <button class="btn-code" onclick="toggleSource('merge_sort')">📄 View Python Backend Source (algorithms/merge_sort.py)</button>
+            <div id="code_merge_sort" class="code-container"><pre>Loading Python source code...</pre></div>
+
+            <div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 10px;">
+                <button class="btn" onclick="runMergeSortDemo()">⚡ Run on Active Requests</button>
                 <button class="btn btn-secondary" onclick="runMergeSortSample()">Load Test Sample</button>
             </div>
 
             <div id="mergeSortOutput" class="output-box">
-                <em>Click "Run Merge Sort" to inspect recursive sorting on disaster telemetry.</em>
+                <em>Click "Run on Active Requests" to sort live database incidents.</em>
             </div>
         </div>
 
         <!-- 2. BINARY SEARCH -->
-        <div class="card">
+        <div class="card" data-category="searching">
             <div class="card-header">
                 <div class="card-title">
                     <span>🔍 2. Iterative Binary Search</span>
@@ -389,9 +485,13 @@
             </div>
 
             <div class="complexity-bar">
-                <div><span>Time:</span> <strong>O(log N)</strong></div>
+                <div><span>Time:</span> <strong>O(log N)</strong> (Worst/Avg), <strong>O(1)</strong> (Best)</div>
                 <div><span>Space:</span> <strong>O(1)</strong> in-place</div>
                 <div><span>Precondition:</span> <strong>Array Sorted by ID</strong></div>
+            </div>
+
+            <div class="usage-badge">
+                📍 Used in: app.py:admin_search_request_by_id() & Admin Search Bar
             </div>
 
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
@@ -399,8 +499,11 @@
                 Visualizes pointers <code>low</code>, <code>mid</code>, and <code>high</code>.
             </p>
 
-            <div class="input-group">
-                <input id="bsTargetInput" type="number" placeholder="Enter Request ID (e.g. 1, 5, 20)" value="1" style="width: 180px;">
+            <button class="btn-code" onclick="toggleSource('binary_search')">📄 View Python Backend Source (algorithms/binary_search.py)</button>
+            <div id="code_binary_search" class="code-container"><pre>Loading Python source code...</pre></div>
+
+            <div class="input-group" style="margin-top: 10px;">
+                <input id="bsTargetInput" type="number" placeholder="Enter Request ID" value="68" style="width: 160px;">
                 <button class="btn" onclick="runBinarySearchDemo()">🔍 Search by ID</button>
             </div>
 
@@ -409,8 +512,8 @@
             </div>
         </div>
 
-        <!-- 3. PRIORITY QUEUE (BINARY HEAP) -->
-        <div class="card">
+        <!-- 3. PRIORITY QUEUE (BINARY MAX-HEAP) -->
+        <div class="card" data-category="heaps">
             <div class="card-header">
                 <div class="card-title">
                     <span>⛰️ 3. Priority Queue (Binary Max-Heap)</span>
@@ -422,15 +525,23 @@
                 <div><span>Push:</span> <strong>O(log N)</strong> sift-up</div>
                 <div><span>Pop:</span> <strong>O(log N)</strong> sift-down</div>
                 <div><span>Peek:</span> <strong>O(1)</strong> root</div>
+                <div><span>Space:</span> <strong>O(N)</strong> array</div>
+            </div>
+
+            <div class="usage-badge">
+                📍 Used in: app.py:admin_triage_queue() & app.py:admin_pop_next_dispatch()
             </div>
 
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
-                Array-backed binary tree using explicit index arithmetic 
+                Array-backed binary heap using explicit index arithmetic 
                 <code>(parent=(i-1)//2, left=2i+1, right=2i+2)</code> without <code>heapq</code>. 
                 Always extracts the most critical patient first.
             </p>
 
-            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <button class="btn-code" onclick="toggleSource('priority_queue')">📄 View Python Backend Source (algorithms/priority_queue.py)</button>
+            <div id="code_priority_queue" class="code-container"><pre>Loading Python source code...</pre></div>
+
+            <div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 10px;">
                 <button class="btn" onclick="runPriorityQueueInspect()">👁️ Inspect Queue / Peek Root</button>
                 <button class="btn btn-secondary" onclick="runPriorityQueueDemoData()">Heap Sift Simulation</button>
             </div>
@@ -440,13 +551,49 @@
             </div>
         </div>
 
-        <!-- 4. DIJKSTRA'S SHORTEST PATH -->
-        <div class="card">
+        <!-- 4. HEAP SORT -->
+        <div class="card" data-category="sorting heaps">
             <div class="card-header">
                 <div class="card-title">
-                    <span>🛣️ 4. Dijkstra's Algorithm</span>
+                    <span>📊 4. In-Place Heap Sort</span>
                 </div>
-                <span class="badge badge-purple">Hazard-Aware Routing</span>
+                <span class="badge badge-purple">In-Place Sorting</span>
+            </div>
+
+            <div class="complexity-bar">
+                <div><span>Time:</span> <strong>O(N log N)</strong> (Best/Avg/Worst)</div>
+                <div><span>Space:</span> <strong>O(1)</strong> auxiliary (In-Place)</div>
+                <div><span>Structure:</span> <strong>Complete Binary Tree</strong></div>
+            </div>
+
+            <div class="usage-badge">
+                📍 Used in: algorithms/heap_sort.py & In-Place Capacity Ranking
+            </div>
+
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+                Builds a heap in O(N) using bottom-up sift-down, then repeatedly extracts the root to the back
+                using temporary variable swaps <code>temp = arr[0]; arr[0] = arr[i]; arr[i] = temp</code>.
+            </p>
+
+            <button class="btn-code" onclick="toggleSource('heap_sort')">📄 View Python Backend Source (algorithms/heap_sort.py)</button>
+            <div id="code_heap_sort" class="code-container"><pre>Loading Python source code...</pre></div>
+
+            <div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 10px;">
+                <button class="btn" onclick="runHeapSortDemo()">⚡ Sort Test Numbers & Requests</button>
+            </div>
+
+            <div id="heapSortOutput" class="output-box">
+                <em>Click to run Heap Sort and observe heap construction and extraction phases.</em>
+            </div>
+        </div>
+
+        <!-- 5. DIJKSTRA'S SHORTES PATH -->
+        <div class="card" data-category="graphs">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>🛣️ 5. Dijkstra's Shortest Path</span>
+                </div>
+                <span class="badge badge-blue">Hazard-Aware Routing</span>
             </div>
 
             <div class="complexity-bar">
@@ -455,12 +602,19 @@
                 <div><span>Data Struct:</span> <strong>Adjacency List + Min-Heap</strong></div>
             </div>
 
+            <div class="usage-badge">
+                📍 Used in: routing.py:plan_evacuation_route() & app.py:api_route_plan()
+            </div>
+
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
                 Finds the fastest safe evacuation route across the Coimbatore road transit network. 
                 Dynamically penalizes or detours around waterlogged road segments.
             </p>
 
-            <div class="input-group" style="flex-wrap: wrap;">
+            <button class="btn-code" onclick="toggleSource('dijkstra')">📄 View Python Backend Source (algorithms/dijkstra.py)</button>
+            <div id="code_dijkstra" class="code-container"><pre>Loading Python source code...</pre></div>
+
+            <div class="input-group" style="margin-top: 10px; flex-wrap: wrap;">
                 <select id="dijkstraStart">
                     <option value="gandhipuram_hub">Gandhipuram Hub</option>
                     <option value="cross_cut_rd">Cross Cut Road</option>
@@ -476,63 +630,128 @@
                     <option value="sundarapuram_nh">Sundarapuram NH</option>
                 </select>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--accent-amber);">
-                    <input type="checkbox" id="floodPenaltyToggle" checked> Active Flood Hazard Penalty
+                    <input type="checkbox" id="floodPenaltyToggle" checked> Flood Hazard Penalty
                 </label>
             </div>
 
-            <button class="btn" onclick="runDijkstraDemo()">🚀 Compute Shortest Safe Path</button>
+            <button class="btn" onclick="runDijkstraDemo()">🚀 Compute Safe Evacuation Route</button>
 
             <div id="dijkstraOutput" class="output-box">
                 <em>Select origin and destination to compute minimum distance path.</em>
             </div>
         </div>
 
-        <!-- 5. GRAPH TRAVERSALS: BFS & DFS -->
-        <div class="card" style="grid-column: 1 / -1;">
+        <!-- 6. BREADTH-FIRST SEARCH (BFS) -->
+        <div class="card" data-category="graphs">
             <div class="card-header">
                 <div class="card-title">
-                    <span>🌐 5. Graph Traversals: BFS (Queue) vs DFS (Stack)</span>
+                    <span>🌊 6. Breadth-First Search (BFS)</span>
                 </div>
-                <span class="badge badge-blue">Network Analysis</span>
+                <span class="badge badge-green">Evacuation Wave</span>
             </div>
 
             <div class="complexity-bar">
-                <div><span>BFS:</span> <strong>FIFO Queue &bull; Level-Order &bull; Flood Propagation Wave</strong></div>
-                <div><span>DFS:</span> <strong>LIFO Stack &bull; Deep Path Exploration &bull; Evacuation Corridor</strong></div>
-                <div><span>Both:</span> <strong>O(V + E) with Visited Hash Set</strong></div>
+                <div><span>Time:</span> <strong>O(V + E)</strong></div>
+                <div><span>Space:</span> <strong>O(V)</strong></div>
+                <div><span>Data Struct:</span> <strong>Manual FIFO Queue (ManualQueue)</strong></div>
             </div>
 
-            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 14px;">
-                <label style="font-size: 13px;">Origin Node:</label>
-                <select id="traversalStartNode" style="width: 220px;">
-                    <option value="gandhipuram_hub">Gandhipuram Hub</option>
-                    <option value="town_hall">Town Hall Junction</option>
-                    <option value="ukkadam_stand">Ukkadam Bus Terminal</option>
-                    <option value="singanallur_hub">Singanallur Junction</option>
-                    <option value="ettimadai_amrita_gate">Ettimadai Relief Center</option>
-                </select>
-                <button class="btn" onclick="runGraphTraversalsDemo()">⚡ Compare BFS vs DFS</button>
+            <div class="usage-badge">
+                📍 Used in: routing.py:check_evacuation_connectivity() & Flood Zone Discovery
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <div>
-                    <h4 style="color: var(--accent-cyan); margin-bottom: 8px;">🌊 BFS Level-Order Wave (Shortest Hops)</h4>
-                    <div id="bfsOutput" class="output-box" style="height: 200px;">
-                        <em>Run traversal to view BFS queue propagation.</em>
-                    </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+                Level-by-level exploration outward from an epicenter. Simulates water flood wave propagation
+                and determines all relief shelters reachable within <em>k</em> road segments.
+            </p>
+
+            <button class="btn-code" onclick="toggleSource('bfs')">📄 View Python Backend Source (algorithms/bfs.py)</button>
+            <div id="code_bfs" class="code-container"><pre>Loading Python source code...</pre></div>
+
+            <div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 10px;">
+                <button class="btn" onclick="runBFSDemo()">🌊 Execute BFS Evacuation Wave</button>
+            </div>
+
+            <div id="bfsOutput" class="output-box">
+                <em>Click to run BFS level-order exploration.</em>
+            </div>
+        </div>
+
+        <!-- 7. DEPTH-FIRST SEARCH (DFS) -->
+        <div class="card" data-category="graphs">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>🌲 7. Depth-First Search (DFS)</span>
                 </div>
-                <div>
-                    <h4 style="color: var(--accent-purple); margin-bottom: 8px;">🌲 DFS Deep Exploration (Backtracking)</h4>
-                    <div id="dfsOutput" class="output-box" style="height: 200px;">
-                        <em>Run traversal to view DFS stack exploration.</em>
-                    </div>
+                <span class="badge badge-purple">Corridor Reachability</span>
+            </div>
+
+            <div class="complexity-bar">
+                <div><span>Time:</span> <strong>O(V + E)</strong></div>
+                <div><span>Space:</span> <strong>O(V)</strong></div>
+                <div><span>Data Struct:</span> <strong>Manual LIFO Stack (ManualStack)</strong></div>
+            </div>
+
+            <div class="usage-badge">
+                📍 Used in: algorithms/dfs.py:find_connected_components() & Isolation Audits
+            </div>
+
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+                Deep branch exploration using a manual stack. Identifies disconnected topological components
+                ("flood islands") where roads are cut off and helicopter rescue is mandatory.
+            </p>
+
+            <button class="btn-code" onclick="toggleSource('dfs')">📄 View Python Backend Source (algorithms/dfs.py)</button>
+            <div id="code_dfs" class="code-container"><pre>Loading Python source code...</pre></div>
+
+            <div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 10px;">
+                <button class="btn" onclick="runDFSDemo()">🌲 Execute DFS Corridor Search</button>
+            </div>
+
+            <div id="dfsOutput" class="output-box">
+                <em>Click to run DFS deep branch search.</em>
+            </div>
+        </div>
+
+        <!-- 8. NEAREST RESOURCE SELECTION -->
+        <div class="card" data-category="selection">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>🎯 8. Nearest Resource Selection</span>
                 </div>
+                <span class="badge badge-amber">O(N) Optimal Scan</span>
+            </div>
+
+            <div class="complexity-bar">
+                <div><span>Time:</span> <strong>O(N)</strong> single-pass scan</div>
+                <div><span>Space:</span> <strong>O(1)</strong> in-place candidate pointer</div>
+                <div><span>Formula:</span> <strong>Haversine Great-Circle Metric</strong></div>
+            </div>
+
+            <div class="usage-badge">
+                📍 Used in: app.py:admin_assign_team() & app.py:admin_assign_shelter()
+            </div>
+
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+                Replaces wasteful O(N log N) sorting with a single linear pass that validates responder availability
+                and shelter capacity constraints while maintaining the minimum-distance pointer.
+            </p>
+
+            <button class="btn-code" onclick="toggleSource('nearest_resource')">📄 View Python Backend Source (algorithms/nearest_resource.py)</button>
+            <div id="code_nearest_resource" class="code-container"><pre>Loading Python source code...</pre></div>
+
+            <div style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 10px;">
+                <button class="btn" onclick="runNearestResourceDemo()">🎯 Find Closest Available Team</button>
+            </div>
+
+            <div id="nearestOutput" class="output-box">
+                <em>Click to run single-pass O(N) resource allocation.</em>
             </div>
         </div>
 
     </div>
 
-    <!-- SUMMARY REFERENCE TABLE -->
+    <!-- SUMMARY REFERENCE TABLE FOR VIVA -->
     <div class="card" style="margin-bottom: 30px;">
         <div class="card-header">
             <div class="card-title">
@@ -563,7 +782,7 @@
                     <td>Sorted Array pointers <code>low, mid, high</code></td>
                     <td>\(O(1)\) Best, \(O(\log N)\) Avg/Worst</td>
                     <td>\(O(1)\) iterative</td>
-                    <td>Instant sub-second incident lookup by ID without database load</td>
+                    <td>Instant sub-second incident lookup by ID without database scan</td>
                 </tr>
                 <tr>
                     <td><strong>Priority Queue</strong></td>
@@ -571,6 +790,13 @@
                     <td>Push: \(O(\log N)\), Pop: \(O(\log N)\), Peek: \(O(1)\)</td>
                     <td>\(O(N)\) heap storage</td>
                     <td>Live dispatching of highest-urgency emergency cases to rescue teams</td>
+                </tr>
+                <tr>
+                    <td><strong>Heap Sort</strong></td>
+                    <td>Complete Binary Tree in Array</td>
+                    <td>\(O(N \log N)\) Best/Avg/Worst</td>
+                    <td>\(O(1)\) in-place</td>
+                    <td>In-place capacity sorting using explicit <code>temp</code> swaps and <code>heapify</code></td>
                 </tr>
                 <tr>
                     <td><strong>Dijkstra's Algorithm</strong></td>
@@ -581,17 +807,24 @@
                 </tr>
                 <tr>
                     <td><strong>BFS Traversal</strong></td>
-                    <td>FIFO Queue (<code>collections.deque</code>)</td>
+                    <td>Manual FIFO Queue (<code>ManualQueue</code>)</td>
                     <td>\(O(V + E)\)</td>
                     <td>\(O(V)\) queue &amp; visited</td>
                     <td>Evacuation wave modeling; identifies shelters reachable within \(k\) hops</td>
                 </tr>
                 <tr>
                     <td><strong>DFS Traversal</strong></td>
-                    <td>LIFO Stack / Recursion</td>
+                    <td>Manual LIFO Stack (<code>ManualStack</code>)</td>
                     <td>\(O(V + E)\)</td>
                     <td>\(O(V)\) stack &amp; visited</td>
                     <td>Deep evacuation corridor search; connected component connectivity check</td>
+                </tr>
+                <tr>
+                    <td><strong>Nearest Resource</strong></td>
+                    <td>Direct Variable Pointer</td>
+                    <td>\(O(N)\) single pass</td>
+                    <td>\(O(1)\)</td>
+                    <td>Optimal assignment of nearest available rescue team and verified shelter</td>
                 </tr>
             </tbody>
         </table>
@@ -602,6 +835,75 @@
     </footer>
 
     <script>
+        // Cache for backend source code
+        let sourceCodeCache = {};
+
+        // Fetch and toggle source code
+        async function toggleSource(algoKey) {
+            const container = document.getElementById(`code_${algoKey}`);
+            if (container.style.display === 'block') {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+
+            if (!sourceCodeCache[algoKey]) {
+                container.innerHTML = '<em>Fetching genuine Python source code from backend...</em>';
+                try {
+                    const res = await fetch(`/api/dsa/source-code/${algoKey}`);
+                    const data = await res.json();
+                    if (data.success && data.code) {
+                        sourceCodeCache[algoKey] = data.code;
+                        renderSourceCode(container, data.filename, data.code);
+                    } else {
+                        container.innerHTML = `<span style="color:var(--accent-red);">Failed to load source: ${data.error}</span>`;
+                    }
+                } catch (e) {
+                    container.innerHTML = `<span style="color:var(--accent-red);">Network error loading source.</span>`;
+                }
+            } else {
+                renderSourceCode(container, `algorithms/${algoKey}.py`, sourceCodeCache[algoKey]);
+            }
+        }
+
+        function renderSourceCode(container, filename, code) {
+            container.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:11px; color:var(--accent-cyan);">
+                <span>📁 File: <strong>${filename}</strong></span>
+                <span style="color:var(--accent-green);">✓ Genuine Backend Source</span>
+            </div><pre>${escapeHtml(code)}</pre>`;
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Filter cards
+        function filterCards(category) {
+            const btns = document.querySelectorAll('.filter-btn');
+            btns.forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const cards = document.querySelectorAll('#algoCardsGrid .card');
+            cards.forEach(c => {
+                if (category === 'all') {
+                    c.style.display = 'flex';
+                } else {
+                    const cats = (c.getAttribute('data-category') || '').split(' ');
+                    if (cats.includes(category)) {
+                        c.style.display = 'flex';
+                    } else {
+                        c.style.display = 'none';
+                    }
+                }
+            });
+        }
+
         // API Helper
         async function fetchDemoData() {
             const res = await fetch('/api/dsa/demo');
@@ -615,7 +917,6 @@
             try {
                 const res = await fetch('/admin/requests');
                 if (res.status === 401 || res.status === 403) {
-                    // Fall back to sample demo if not logged into admin
                     runMergeSortSample();
                     return;
                 }
@@ -682,7 +983,6 @@
                 }
             } catch (e) {}
 
-            // Fallback to demo API trace
             const demo = await fetchDemoData();
             const bs = demo.algorithms.binary_search;
             renderBinarySearchTrace({
@@ -703,7 +1003,7 @@
                 &bull; <strong>Space Size:</strong> N = ${data.total_records}
             </div>`;
             if (data.trace && data.trace.length) {
-                html += `<div style="font-size:12px; font-weight:600; margin-bottom:4px; color:var(--accent-cyan);">Execution Trace (Interval Reduction):</div>`;
+                html += `<div style="font-size:12px; font-weight:600; margin-bottom:4px; color:var(--accent-cyan);">Execution Trace (Interval Halving):</div>`;
                 data.trace.forEach(step => {
                     html += `<div class="trace-step">
                         <strong>Step ${step.step}:</strong> Interval [${step.low} .. ${step.high}] &bull; Midpoint index: <strong>${step.mid}</strong> (ID: ${step.mid_id})
@@ -744,7 +1044,6 @@
                 <strong>Peek (Root):</strong> <span class="pill-critical">Request #${root ? root.id : 'N/A'}</span>
                 (${root ? root.priority : 'N/A'}, Score: ${root ? root.priority_score : 0})
             </div>`;
-            html += `<div style="font-size:12px; margin-bottom:6px; color:var(--accent-amber);">Root Node (O(1) Peek - Next in Line to Dispatch):</div>`;
             if (root) {
                 html += `<div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); padding:8px 12px; border-radius:8px; margin-bottom:12px;">
                     🚨 <strong>Request #${root.id}</strong> &bull; Citizen: <strong>${root.name || root.user_name || 'Victim'}</strong> &bull; Priority: <strong>${root.priority}</strong> &bull; Score: <strong>${root.priority_score}</strong>
@@ -761,7 +1060,33 @@
             out.innerHTML = html;
         }
 
-        // 4. DIJKSTRA DEMO
+        // 4. HEAP SORT DEMO
+        async function runHeapSortDemo() {
+            const out = document.getElementById('heapSortOutput');
+            out.innerHTML = '<em>Running In-Place Heap Sort...</em>';
+
+            const demo = await fetchDemoData();
+            const hs = demo.algorithms.heap_sort;
+
+            let html = `<div style="margin-bottom:8px;">
+                <strong>Unsorted Input Array:</strong> <code>[${hs.original_array.join(', ')}]</code>
+            </div>`;
+            html += `<div style="margin-bottom:8px;">
+                <strong>Sorted Output Array:</strong> <code style="color:var(--accent-green); font-weight:bold;">[${hs.sorted_array.join(', ')}]</code>
+            </div>`;
+
+            if (hs.trace && hs.trace.length) {
+                html += `<div style="font-size:12px; font-weight:600; margin-bottom:4px; color:var(--accent-purple);">Heap Sort Trace Steps:</div>`;
+                hs.trace.forEach(step => {
+                    html += `<div class="trace-step">
+                        <strong>Step ${step.step}:</strong> ${step.action} &bull; State: <code>[${step.state.join(', ')}]</code>
+                    </div>`;
+                });
+            }
+            out.innerHTML = html;
+        }
+
+        // 5. DIJKSTRA DEMO
         async function runDijkstraDemo() {
             const s = document.getElementById('dijkstraStart').value;
             const d = document.getElementById('dijkstraEnd').value;
@@ -776,7 +1101,7 @@
                 <strong>Origin:</strong> ${s.replace(/_/g, ' ')} &bull; <strong>Destination:</strong> ${d.replace(/_/g, ' ')}
             </div>`;
             html += `<div style="margin-bottom:8px; font-size:14px;">
-                <strong>Shortest Route Distance:</strong> <span style="color:var(--accent-green); font-weight:bold;">${route.distance_km || 4.2} km</span>
+                <strong>Shortest Safe Route:</strong> <span style="color:var(--accent-green); font-weight:bold;">${route.distance_km || 4.2} km</span>
                 ${hazardOn ? '<span class="badge badge-amber" style="margin-left:8px;">Hazard Penalties Active</span>' : ''}
             </div>`;
             html += `<div style="font-size:12px; color:var(--accent-cyan); margin-bottom:6px;">Node Sequence Reconstructed from Predecessors:</div>`;
@@ -791,45 +1116,67 @@
             out.innerHTML = html;
         }
 
-        // 5. GRAPH TRAVERSALS
-        async function runGraphTraversalsDemo() {
-            const start = document.getElementById('traversalStartNode').value;
-            const bfsOut = document.getElementById('bfsOutput');
-            const dfsOut = document.getElementById('dfsOutput');
-
-            bfsOut.innerHTML = '<em>Computing BFS level order...</em>';
-            dfsOut.innerHTML = '<em>Computing DFS branch exploration...</em>';
-
+        // 6. BFS DEMO
+        async function runBFSDemo() {
+            const out = document.getElementById('bfsOutput');
+            out.innerHTML = '<em>Computing BFS evacuation wave...</em>';
             const demo = await fetchDemoData();
-            const trav = demo.algorithms.graph_traversals;
+            const bfs = demo.algorithms.bfs;
 
-            // Render BFS
-            let bHtml = `<div style="font-size:12px; margin-bottom:6px;"><strong>Wave Propagation Order:</strong></div>`;
-            bHtml += `<div style="font-family:monospace; font-size:11px; line-height:1.8;">`;
-            trav.bfs_wave_order.forEach((n, idx) => {
-                const hops = trav.bfs_hop_distances[n] ?? 0;
-                bHtml += `<span style="background:rgba(56,189,248,0.12); padding:2px 6px; border-radius:4px; margin-right:4px;">
+            let html = `<div style="font-size:12px; margin-bottom:6px;"><strong>Origin Node:</strong> <code>${bfs.start_node}</code></div>`;
+            html += `<div style="font-size:12px; margin-bottom:6px;"><strong>Level-Order Wave Propagation (Shortest Hops):</strong></div>`;
+            html += `<div style="font-family:monospace; font-size:11.5px; line-height:1.8;">`;
+            bfs.wave_order.forEach((n, idx) => {
+                const hops = bfs.hop_distances[n] ?? 0;
+                html += `<span style="background:rgba(56,189,248,0.12); padding:2px 6px; border-radius:4px; margin-right:4px;">
                     ${idx+1}. ${n} (Hop ${hops})
                 </span> `;
             });
-            bHtml += `</div>`;
-            bfsOut.innerHTML = bHtml;
+            html += `</div>`;
+            out.innerHTML = html;
+        }
 
-            // Render DFS
-            let dHtml = `<div style="font-size:12px; margin-bottom:6px;"><strong>Depth-First Path Sequence:</strong></div>`;
-            dHtml += `<div style="font-family:monospace; font-size:11px; line-height:1.8;">`;
-            trav.dfs_order.forEach((n, idx) => {
-                dHtml += `<span style="background:rgba(168,85,247,0.12); padding:2px 6px; border-radius:4px; margin-right:4px;">
+        // 7. DFS DEMO
+        async function runDFSDemo() {
+            const out = document.getElementById('dfsOutput');
+            out.innerHTML = '<em>Computing DFS deep corridor exploration...</em>';
+            const demo = await fetchDemoData();
+            const dfs = demo.algorithms.dfs;
+
+            let html = `<div style="font-size:12px; margin-bottom:6px;"><strong>Origin Node:</strong> <code>${dfs.start_node}</code></div>`;
+            html += `<div style="font-size:12px; margin-bottom:6px;"><strong>Depth-First Visit Sequence:</strong></div>`;
+            html += `<div style="font-family:monospace; font-size:11.5px; line-height:1.8;">`;
+            dfs.visited_order.forEach((n, idx) => {
+                html += `<span style="background:rgba(168,85,247,0.12); padding:2px 6px; border-radius:4px; margin-right:4px;">
                     ${idx+1}. ${n}
                 </span> `;
             });
-            dHtml += `</div>`;
-            if (trav.dfs_path_to_singanallur) {
-                dHtml += `<div style="margin-top:8px; font-size:12px; color:var(--accent-green);">
-                    Direct Corridor to Destination: ${trav.dfs_path_to_singanallur.join(' ➔ ')}
+            html += `</div>`;
+            if (dfs.path_to_singanallur) {
+                html += `<div style="margin-top:8px; font-size:12px; color:var(--accent-green);">
+                    Direct Corridor to Destination: <code>${dfs.path_to_singanallur.join(' ➔ ')}</code>
                 </div>`;
             }
-            dfsOut.innerHTML = dHtml;
+            out.innerHTML = html;
+        }
+
+        // 8. NEAREST RESOURCE DEMO
+        async function runNearestResourceDemo() {
+            const out = document.getElementById('nearestOutput');
+            out.innerHTML = '<em>Running single-pass O(N) resource allocation scan...</em>';
+            const demo = await fetchDemoData();
+            const nr = demo.algorithms.nearest_resource;
+
+            let html = `<div style="margin-bottom:8px;">
+                <strong>Victim Incident:</strong> Request #101 (Gandhipuram 11.0168°N, 76.9558°E)
+            </div>`;
+            if (nr.assigned_team) {
+                html += `<div style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); padding:8px 12px; border-radius:8px;">
+                    🚒 <strong>Assigned Team:</strong> ${nr.assigned_team.name} &bull; Status: <span style="color:var(--accent-green); font-weight:bold;">${nr.assigned_team.status}</span>
+                    <br><span style="font-size:11.5px; color:var(--text-muted);">Selected via single-pass scan without sorting. Distance computed via Haversine.</span>
+                </div>`;
+            }
+            out.innerHTML = html;
         }
 
         // Auto-run initial previews on load
@@ -837,8 +1184,11 @@
             runMergeSortSample();
             runBinarySearchDemo();
             runPriorityQueueDemoData();
+            runHeapSortDemo();
             runDijkstraDemo();
-            runGraphTraversalsDemo();
+            runBFSDemo();
+            runDFSDemo();
+            runNearestResourceDemo();
         });
     </script>
 </body>
