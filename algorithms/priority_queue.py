@@ -129,36 +129,114 @@ class EmergencyPriorityQueue:
 
     Orders requests such that Critical > High > Medium > Low,
     followed by numerical priority score (descending), and earlier submission/ID.
+
+    Mathematical Tree-to-Array Invariants:
+      - Parent index:       (i - 1) // 2
+      - Left child index:   2 * i + 1
+      - Right child index:  2 * i + 2
     """
 
-    def __init__(self):
-        def _is_more_urgent(a: Dict[str, Any], b: Dict[str, Any]) -> bool:
-            # compare_emergency_requests returns -1 if 'a' has higher priority than 'b'
-            return compare_emergency_requests(a, b) < 0
-
-        self._heap = BinaryHeap(_is_more_urgent)
+    def __init__(self, initial_items: Optional[List[Dict[str, Any]]] = None):
+        self._heap: List[Dict[str, Any]] = []
+        if initial_items:
+            self.build_heap(initial_items)
 
     def __len__(self) -> int:
         return len(self._heap)
 
     def is_empty(self) -> bool:
-        return self._heap.is_empty()
+        return len(self._heap) == 0
+
+    @staticmethod
+    def parent_index(i: int) -> int:
+        return (i - 1) // 2
+
+    @staticmethod
+    def left_child_index(i: int) -> int:
+        return 2 * i + 1
+
+    @staticmethod
+    def right_child_index(i: int) -> int:
+        return 2 * i + 2
+
+    def is_higher_priority(self, req_a: Dict[str, Any], req_b: Dict[str, Any]) -> bool:
+        """Returns True if req_a has higher triage urgency than req_b."""
+        return compare_emergency_requests(req_a, req_b) < 0
 
     def push(self, request: Dict[str, Any]) -> None:
         """Enqueues an emergency rescue request with O(log N) heap adjustment."""
-        self._heap.push(request)
+        self._heap.append(request)
+        self.heapify_up(len(self._heap) - 1)
 
     def pop(self) -> Dict[str, Any]:
-        """Dequeues the highest-urgency emergency request ready for dispatch."""
-        return self._heap.pop()
+        """Dequeues and returns the highest-urgency emergency request ready for dispatch."""
+        if self.is_empty():
+            raise IndexError("pop from an empty EmergencyPriorityQueue")
+
+        root = self._heap[0]
+        last_item = self._heap.pop()
+
+        if not self.is_empty():
+            self._heap[0] = last_item
+            self.heapify_down(0)
+
+        return root
 
     def peek(self) -> Optional[Dict[str, Any]]:
         """Previews the highest-urgency pending emergency request without removing it."""
-        return self._heap.peek()
+        if self.is_empty():
+            return None
+        return self._heap[0]
+
+    def heapify_up(self, index: int) -> None:
+        """Restores max-heap invariant upward from the given index to the root in O(log N)."""
+        current = index
+        while current > 0:
+            parent = self.parent_index(current)
+            if self.is_higher_priority(self._heap[current], self._heap[parent]):
+                self._heap[current], self._heap[parent] = self._heap[parent], self._heap[current]
+                current = parent
+            else:
+                break
+
+    def heapify_down(self, index: int) -> None:
+        """Restores max-heap invariant downward from index toward the leaves in O(log N)."""
+        current = index
+        n = len(self._heap)
+
+        while True:
+            highest_priority_idx = current
+            left = self.left_child_index(current)
+            right = self.right_child_index(current)
+
+            if left < n and self.is_higher_priority(self._heap[left], self._heap[highest_priority_idx]):
+                highest_priority_idx = left
+
+            if right < n and self.is_higher_priority(self._heap[right], self._heap[highest_priority_idx]):
+                highest_priority_idx = right
+
+            if highest_priority_idx != current:
+                self._heap[current], self._heap[highest_priority_idx] = (
+                    self._heap[highest_priority_idx],
+                    self._heap[current],
+                )
+                current = highest_priority_idx
+            else:
+                break
+
+    def build_heap(self, items: List[Dict[str, Any]]) -> None:
+        """
+        Constructs binary max-heap from an arbitrary list using bottom-up heapification.
+        Time Complexity: O(N) linear time (more efficient than N * log N successive pushes).
+        """
+        self._heap = list(items)
+        # Start at the last non-leaf node: (n // 2) - 1 down to 0
+        for i in range((len(self._heap) // 2) - 1, -1, -1):
+            self.heapify_down(i)
 
     def to_list(self) -> List[Dict[str, Any]]:
-        """Returns the internal array representation of the heap for visualization."""
-        return self._heap.to_list()
+        """Returns a copy of the internal heap array representation."""
+        return list(self._heap)
 
 
 class MinHeap:

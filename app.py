@@ -22,6 +22,7 @@ from algorithms.binary_search import binary_search_request_by_id, binary_search_
 from algorithms.priority_queue import EmergencyPriorityQueue, BinaryHeap, MinHeap
 from algorithms.dijkstra import AdjacencyListGraph, dijkstra_shortest_path
 from algorithms.graph_traversal import bfs_traversal, dfs_traversal
+from algorithms.nearest_resource import find_nearest_available_team, find_nearest_suitable_shelter
 
 logging.basicConfig(
     level=logging.INFO,
@@ -1220,13 +1221,8 @@ def admin_assign_team(request_id):
                 "SELECT * FROM rescue_teams WHERE status = 'Available' AND latitude IS NOT NULL AND longitude IS NOT NULL"
             ).fetchall()
             if available_teams:
-                e_lat = float(emergency["latitude"])
-                e_lon = float(emergency["longitude"])
-                sorted_teams = sorted(
-                    available_teams,
-                    key=lambda t: haversine_distance(e_lat, e_lon, float(t["latitude"]), float(t["longitude"]))
-                )
-                team = sorted_teams[0]
+                # Manual single-pass selection in O(N) time and O(1) space (replaces O(N log N) sorted())
+                team = find_nearest_available_team(emergency, [dict(t) for t in available_teams])
 
         if team is None:
             team = conn.execute("""
@@ -1328,13 +1324,12 @@ def admin_assign_shelter(request_id):
                 WHERE is_verified = 1 AND (capacity - occupied) >= ? AND latitude IS NOT NULL AND longitude IS NOT NULL
             """, (people_count,)).fetchall()
             if candidate_shelters:
-                e_lat = float(emergency["latitude"])
-                e_lon = float(emergency["longitude"])
-                sorted_shelters = sorted(
-                    candidate_shelters,
-                    key=lambda s: haversine_distance(e_lat, e_lon, float(s["latitude"]), float(s["longitude"]))
+                # Manual single-pass selection in O(N) time and O(1) space (replaces O(N log N) sorted())
+                shelter = find_nearest_suitable_shelter(
+                    dict(emergency),
+                    [dict(s) for s in candidate_shelters],
+                    required_capacity=people_count
                 )
-                shelter = sorted_shelters[0]
 
         # Otherwise find matching location or lowest occupancy with capacity
         if shelter is None:
@@ -1901,11 +1896,12 @@ def plan_route():
         """).fetchall()
 
         if candidate_shelters:
-            sorted_candidates = sorted(
-                candidate_shelters,
-                key=lambda s: haversine_distance(s_lat, s_lon, float(s["latitude"]), float(s["longitude"]))
+            # Manual single-pass selection in O(N) time and O(1) space (replaces O(N log N) sorted())
+            shelter = find_nearest_suitable_shelter(
+                {"latitude": s_lat, "longitude": s_lon, "people": 1},
+                [dict(s) for s in candidate_shelters],
+                required_capacity=1
             )
-            shelter = sorted_candidates[0]
         else:
             shelter = conn.execute("""
                 SELECT * FROM shelters

@@ -37,7 +37,15 @@ from algorithms.dijkstra import (
 from algorithms.graph_traversal import (
     bfs_traversal,
     dfs_traversal,
-    find_connected_components
+    find_connected_components,
+    ManualQueue,
+    ManualStack
+)
+
+from algorithms.nearest_resource import (
+    find_nearest_available_team,
+    find_nearest_suitable_shelter,
+    find_nearest_resource
 )
 
 __all__ = [
@@ -56,4 +64,9 @@ __all__ = [
     "bfs_traversal",
     "dfs_traversal",
     "find_connected_components",
+    "find_nearest_available_team",
+    "find_nearest_suitable_shelter",
+    "find_nearest_resource",
+    "ManualQueue",
+    "ManualStack",
 ]

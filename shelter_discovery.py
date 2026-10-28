@@ -22,6 +22,8 @@ import logging
 from typing import Dict, Any, List, Optional
 import requests
 
+from algorithms.merge_sort import merge_sort_by_key
+
 logger = logging.getLogger("SmartFloodShelterDiscovery")
 
 # Default Overpass interpreter mirrors
@@ -230,8 +232,8 @@ def discover_potential_shelters(
         seen_names.add(name_key)
         filtered_candidates.append(c)
 
-    # Sort by distance
-    filtered_candidates.sort(key=lambda x: x["distance_km"])
+    # Sort by distance using manual Merge Sort (replaces built-in list.sort())
+    filtered_candidates = merge_sort_by_key(filtered_candidates, key="distance_km")
     filtered_candidates = filtered_candidates[:max_results]
 
     status_note = (

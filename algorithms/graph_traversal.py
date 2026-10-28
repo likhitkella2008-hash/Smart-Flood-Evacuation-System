@@ -5,18 +5,81 @@ Smart Flood Rescue System - Graph Traversals (BFS & DFS) Implementation
 Manual implementations of Breadth-First Search (BFS) and Depth-First Search (DFS)
 for disaster road network analysis, reachability assessment, and flood wave propagation.
 
-Data Structures Used:
-- BFS: First-In, First-Out (FIFO) queue for level-by-level exploration.
-- DFS: Last-In, First-Out (LIFO) stack for deep branch exploration.
+Data Structures Implemented:
+- ManualQueue: Pure manual First-In, First-Out (FIFO) queue for level-by-level exploration.
+- ManualStack: Pure manual Last-In, First-Out (LIFO) stack for deep branch exploration.
 - Visited Set: Hash set ensuring O(1) membership testing and preventing infinite loops in cyclic road networks.
 
 Time Complexity:  O(V + E)
 Space Complexity: O(V)
 """
 
-from collections import deque
 from typing import Any, Dict, List, Optional, Set, Tuple
 from algorithms.dijkstra import AdjacencyListGraph
+
+
+class ManualQueue:
+    """
+    Pure manual First-In, First-Out (FIFO) queue implementation.
+    Operates without collections.deque or external queue libraries.
+    """
+
+    def __init__(self):
+        self._items: List[Any] = []
+        self._head: int = 0
+
+    def enqueue(self, item: Any) -> None:
+        """Appends an element to the back of the queue in O(1)."""
+        self._items.append(item)
+
+    def dequeue(self) -> Any:
+        """Removes and returns the front element from the queue in O(1) amortized."""
+        if self.is_empty():
+            raise IndexError("dequeue from an empty ManualQueue")
+        item = self._items[self._head]
+        self._head += 1
+        # Amortized list compaction to reclaim unused head space
+        if self._head > 500 and self._head > len(self._items) // 2:
+            self._items = self._items[self._head:]
+            self._head = 0
+        return item
+
+    def is_empty(self) -> bool:
+        """Returns True if the queue has no elements pending."""
+        return self._head >= len(self._items)
+
+    def __len__(self) -> int:
+        return len(self._items) - self._head
+
+
+class ManualStack:
+    """
+    Pure manual Last-In, First-Out (LIFO) stack implementation.
+    """
+
+    def __init__(self):
+        self._items: List[Any] = []
+
+    def push(self, item: Any) -> None:
+        """Pushes an element onto the top of the stack in O(1)."""
+        self._items.append(item)
+
+    def pop(self) -> Any:
+        """Pops and returns the topmost element from the stack in O(1)."""
+        if self.is_empty():
+            raise IndexError("pop from an empty ManualStack")
+        return self._items.pop()
+
+    def is_empty(self) -> bool:
+        return len(self._items) == 0
+
+    def peek(self) -> Optional[Any]:
+        if self.is_empty():
+            return None
+        return self._items[-1]
+
+    def __len__(self) -> int:
+        return len(self._items)
 
 
 def bfs_traversal(
@@ -55,7 +118,8 @@ def bfs_traversal(
         raise KeyError(f"Start node '{start}' does not exist in graph.")
 
     visited: Set[str] = {start}
-    queue: deque[Tuple[str, int]] = deque([(start, 0)])  # (node_id, hop_level)
+    queue = ManualQueue()
+    queue.enqueue((start, 0))  # (node_id, hop_level)
 
     visited_order: List[str] = [start]
     hop_distances: Dict[str, int] = {start: 0}
@@ -71,8 +135,8 @@ def bfs_traversal(
             "action": f"Initialized BFS queue at origin node '{start}'."
         })
 
-    while queue:
-        curr, hops = queue.popleft()
+    while not queue.is_empty():
+        curr, hops = queue.dequeue()
 
         if max_hops is not None and hops >= max_hops:
             continue
@@ -84,7 +148,7 @@ def bfs_traversal(
                 visited_order.append(neighbor)
                 hop_distances[neighbor] = hops + 1
                 parent_map[neighbor] = curr
-                queue.append((neighbor, hops + 1))
+                queue.enqueue((neighbor, hops + 1))
 
                 step += 1
                 if collect_trace:
@@ -114,7 +178,7 @@ def dfs_traversal(
     collect_trace: bool = False
 ) -> Dict[str, Any]:
     """
-    Performs iterative Depth-First Search using an explicit LIFO stack.
+    Performs iterative Depth-First Search using an explicit manual LIFO stack.
 
     Practical Application in Flood Rescue:
         - "Deep Corridor Exploration": Explores alternative evacuation corridors
@@ -148,14 +212,15 @@ def dfs_traversal(
         raise KeyError(f"Target node '{target}' does not exist in graph.")
 
     visited: Set[str] = set()
-    stack: List[Tuple[str, List[str]]] = [(start, [start])]  # (node_id, path_so_far)
+    stack = ManualStack()
+    stack.push((start, [start]))  # (node_id, path_so_far)
     visited_order: List[str] = []
     path_to_target: Optional[List[str]] = None
     target_found = False
     trace: List[Dict[str, Any]] = []
     step = 0
 
-    while stack:
+    while not stack.is_empty():
         curr, path = stack.pop()
 
         if curr not in visited:
@@ -185,7 +250,7 @@ def dfs_traversal(
             for edge in reversed(graph.neighbors(curr)):
                 neighbor = edge["to"]
                 if neighbor not in visited:
-                    stack.append((neighbor, path + [neighbor]))
+                    stack.push((neighbor, path + [neighbor]))
 
     return {
         "success": True,
