@@ -54,6 +54,12 @@
             <button id="registerLink" class="text-btn" onclick="showRegister()">
                 New citizen? Create account
             </button>
+
+            <div style="text-align:center; margin-top:16px; padding-top:14px; border-top:1px solid #1e3a5f;">
+                <a href="/dsa" target="_blank" style="color:#38bdf8; font-size:13px; text-decoration:none; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
+                    ⚡ Open ADSA Algorithm Lab &amp; Viva Demo &rarr;
+                </a>
+            </div>
         </div>
 
         <!-- REGISTER FORM -->
@@ -105,6 +111,7 @@
 
         <div class="header-right">
             <span id="headerUser"></span>
+            <a href="/dsa" target="_blank" class="secondary-btn" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:6px 12px; border-radius:8px; border:1px solid #38bdf8; color:#38bdf8; background:rgba(56,189,248,0.1);">⚡ ADSA Lab</a>
             <button onclick="logout()" class="logout-btn">Logout</button>
         </div>
     </header>
@@ -397,6 +404,7 @@
             <button class="tab-btn" onclick="switchAdminTab('teams')">🚒 Rescue Fleets</button>
             <button class="tab-btn" onclick="switchAdminTab('shelters')">🏠 Shelter Management</button>
             <button class="tab-btn" onclick="switchAdminTab('analytics')">📈 Flood Risk & Analytics</button>
+            <button class="tab-btn" onclick="window.open('/dsa', '_blank')" style="border-color:#38bdf8; color:#38bdf8;">⚡ ADSA Lab &amp; Viva Demo</button>
         </div>
 
         <!-- TAB 1: OVERVIEW & QUICK METRICS -->
@@ -516,10 +524,23 @@
                 <div class="section-header">
                     <div class="section-title">
                         <h2>Triage Queue & Operations</h2>
-                        <p>Cases automatically ranked by multi-variable triage score and wait-time escalation.</p>
+                        <p>Cases ranked by <strong>Recursive Merge Sort</strong> (Critical &gt; High &gt; Med &gt; Low, Score &darr;). Queue dispatch managed via <strong>Binary Max-Heap</strong>.</p>
                     </div>
-                    <button class="secondary-btn" onclick="loadAdminData()">↻ Refresh Queue</button>
+                    <div style="display:flex; gap:8px;">
+                        <button class="primary-btn" onclick="peekNextDispatch()">⛰️ Peek Next Dispatch</button>
+                        <button class="secondary-btn" onclick="loadAdminData()">↻ Refresh Queue</button>
+                    </div>
                 </div>
+
+                <!-- Fast Binary Search Bar -->
+                <div style="background:rgba(15,33,55,0.7); border:1px solid #1e3a5f; padding:12px 16px; border-radius:10px; margin-bottom:16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                    <span style="font-size:13px; font-weight:600; color:#38bdf8;">🔍 Binary Search by ID (O(log N)):</span>
+                    <input id="adminSearchIdInput" type="number" placeholder="Enter Case ID..." style="width:140px; padding:6px 10px; border-radius:6px; border:1px solid #234e7a; background:#060c14; color:#fff;">
+                    <button class="secondary-btn" onclick="adminBinarySearchCase()" style="padding:6px 12px; font-size:12px;">Search Case</button>
+                    <button class="text-btn" onclick="loadAdminRequests()" style="font-size:12px;">Reset Filter</button>
+                    <div id="adminSearchResultMsg" style="font-size:12px; color:#94a3b8; margin-left:auto;"></div>
+                </div>
+
                 <div id="adminRequests"></div>
             </div>
         </div>
@@ -2271,6 +2292,49 @@ async function loadAdminRequests() {
         box.innerHTML = data.requests.map(req => adminRequestCard(req)).join("");
     } catch (e) {
         box.innerHTML = `<p>Unable to load emergency queue.</p>`;
+    }
+}
+
+async function adminBinarySearchCase() {
+    const input = document.getElementById("adminSearchIdInput");
+    const msg = document.getElementById("adminSearchResultMsg");
+    const box = document.getElementById("adminRequests");
+    if (!input || !box) return;
+
+    const targetId = input.value.trim();
+    if (!targetId) {
+        if (msg) msg.textContent = "Please enter an ID to search.";
+        return;
+    }
+
+    if (msg) msg.textContent = `Searching for #${targetId} using O(log N) Binary Search...`;
+    try {
+        const resp = await fetch(`/api/admin/requests/search-id?id=${targetId}`);
+        const data = await resp.json();
+        if (data.success && data.found && data.request) {
+            if (msg) msg.innerHTML = `<span style="color:#10b981; font-weight:600;">✓ Case #${targetId} found in ${data.steps_taken} steps (${data.algorithm}).</span>`;
+            box.innerHTML = adminRequestCard(data.request);
+        } else {
+            if (msg) msg.innerHTML = `<span style="color:#ef4444; font-weight:600;">✗ Case #${targetId} not found (${data.steps_taken || 0} binary search steps evaluated).</span>`;
+            box.innerHTML = `<div class="empty">Case #${escapeHtml(targetId)} was not found in the emergency database.</div>`;
+        }
+    } catch (e) {
+        if (msg) msg.textContent = "Error executing binary search.";
+    }
+}
+
+async function peekNextDispatch() {
+    try {
+        const resp = await fetch('/api/admin/dispatch/triage-queue');
+        const data = await resp.json();
+        if (data.success && data.next_for_dispatch) {
+            const r = data.next_for_dispatch;
+            alert(`⛰️ Priority Queue Root Peek (O(1)):\n\nNext Case to Dispatch: #${r.id} (${r.priority})\nCitizen: ${r.citizen_name || r.name || 'Victim'}\nScore: ${r.priority_score} pts\nLocation: ${r.location}\n\nQueue Size: ${data.queue_size} pending incidents in Binary Heap.`);
+        } else {
+            alert("No pending incidents in Priority Queue.");
+        }
+    } catch (e) {
+        alert("Failed to query Priority Queue.");
     }
 }
 

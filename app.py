@@ -16,6 +16,13 @@ from notifications import notification_service
 from migrate import migrate_database
 from shelter_discovery import discover_potential_shelters, haversine_distance
 
+# Genuine ADSA Implementations
+from algorithms.merge_sort import merge_sort_requests, merge_sort_by_key, compare_emergency_requests
+from algorithms.binary_search import binary_search_request_by_id, binary_search_ids
+from algorithms.priority_queue import EmergencyPriorityQueue, BinaryHeap, MinHeap
+from algorithms.dijkstra import AdjacencyListGraph, dijkstra_shortest_path
+from algorithms.graph_traversal import bfs_traversal, dfs_traversal
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -1101,24 +1108,20 @@ def admin_requests():
         return check
 
     conn = db()
-    # Dynamic recalculation for wait-time triage
-    rows = conn.execute("""
-        SELECT * FROM requests
-        ORDER BY
-            CASE priority
-                WHEN 'Critical' THEN 1
-                WHEN 'High' THEN 2
-                WHEN 'Medium' THEN 3
-                ELSE 4
-            END,
-            priority_score DESC,
-            id DESC
-    """).fetchall()
+    # Fetch raw requests from database without SQL ORDER BY
+    # Ordering is computed purely in Python via manual Recursive Merge Sort
+    rows = conn.execute("SELECT * FROM requests").fetchall()
     conn.close()
+
+    raw_requests = [dict(row) for row in rows]
+    # Pure Python recursive divide-and-conquer Merge Sort (Critical > High > Medium > Low, descending score)
+    sorted_requests = merge_sort_requests(raw_requests)
 
     return jsonify({
         "success": True,
-        "requests": [dict(row) for row in rows]
+        "requests": sorted_requests,
+        "sorting_engine": "Manual Recursive Merge Sort (O(N log N))",
+        "total": len(sorted_requests)
     })
 
 
@@ -2048,6 +2051,241 @@ def manage_road_hazards():
     rows = conn.execute("SELECT * FROM road_hazards WHERE active = 1 ORDER BY id DESC").fetchall()
     conn.close()
     return jsonify({"success": True, "hazards": [dict(r) for r in rows]})
+
+
+# =========================================================
+# ADSA ALGORITHM ENDPOINTS & INTERACTIVE DEMONSTRATION
+# =========================================================
+
+@app.route("/api/admin/requests/search-id", methods=["GET", "POST"])
+def admin_search_request_by_id():
+    """
+    Searches for an emergency request using manual iterative Binary Search on sorted IDs.
+    O(log N) runtime with step-by-step trace.
+    """
+    check = admin_only()
+    if check:
+        return check
+
+    data = get_json_data() if request.method == "POST" else request.args
+    target_id_raw = data.get("id")
+
+    if target_id_raw is None or str(target_id_raw).strip() == "":
+        return jsonify({"success": False, "message": "Target request ID is required."}), 400
+
+    try:
+        target_id = int(target_id_raw)
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "message": "Request ID must be an integer."}), 400
+
+    conn = db()
+    rows = conn.execute("SELECT * FROM requests").fetchall()
+    conn.close()
+
+    raw_requests = [dict(r) for r in rows]
+    # Binary Search requires ascending sorted order by key
+    sorted_by_id = merge_sort_by_key(raw_requests, key="id")
+
+    found_request, steps, trace = binary_search_request_by_id(
+        sorted_by_id, target_id, collect_trace=True
+    )
+
+    return jsonify({
+        "success": True,
+        "target_id": target_id,
+        "found": found_request is not None,
+        "request": found_request,
+        "steps_taken": steps,
+        "total_records": len(sorted_by_id),
+        "trace": trace,
+        "algorithm": "Manual Iterative Binary Search (O(log N))"
+    })
+
+
+@app.route("/api/admin/dispatch/triage-queue")
+def admin_dispatch_triage_queue():
+    """
+    Inspects active emergency dispatch queue using manual Binary Heap Priority Queue.
+    Enqueues all pending requests and returns root peek and queue structure.
+    """
+    check = admin_only()
+    if check:
+        return check
+
+    conn = db()
+    rows = conn.execute("SELECT * FROM requests WHERE status = 'Pending'").fetchall()
+    conn.close()
+
+    pending_requests = [dict(r) for r in rows]
+    pq = EmergencyPriorityQueue()
+    for req in pending_requests:
+        pq.push(req)
+
+    peek_item = pq.peek()
+    heap_list = pq.to_list()
+
+    return jsonify({
+        "success": True,
+        "total_pending": len(pending_requests),
+        "queue_size": len(pq),
+        "next_for_dispatch": peek_item,
+        "heap_array_preview": heap_list[:10],
+        "data_structure": "Manual Array-Based Binary Max-Heap (O(1) peek, O(log N) push/pop)"
+    })
+
+
+@app.route("/api/admin/dispatch/pop-next", methods=["POST"])
+def admin_dispatch_pop_next():
+    """
+    Pops the single highest-urgency emergency request from the Priority Queue
+    for immediate rescue assignment.
+    """
+    check = admin_only()
+    if check:
+        return check
+
+    conn = db()
+    rows = conn.execute("SELECT * FROM requests WHERE status = 'Pending'").fetchall()
+    conn.close()
+
+    pending_requests = [dict(r) for r in rows]
+    if not pending_requests:
+        return jsonify({
+            "success": False,
+            "message": "No pending emergency requests in the triage queue."
+        }), 404
+
+    pq = EmergencyPriorityQueue()
+    for req in pending_requests:
+        pq.push(req)
+
+    top_request = pq.pop()
+
+    return jsonify({
+        "success": True,
+        "message": f"Dequeued highest-priority Request #{top_request.get('id')} ({top_request.get('priority')})",
+        "popped_request": top_request,
+        "remaining_queue_size": len(pq),
+        "algorithm": "EmergencyPriorityQueue.pop() with Sift-Down (O(log N))"
+    })
+
+
+@app.route("/api/dsa/demo")
+def api_dsa_demo():
+    """
+    Comprehensive Demonstration Endpoint: executes all 5 ADSA algorithms
+    with deterministic, verifiable inputs and outputs.
+    """
+    # 1. Merge Sort Demonstration
+    sample_cases = [
+        {"id": 101, "name": "Ravi", "priority": "Medium", "priority_score": 38.0, "created_at": "2026-10-28 10:00:00"},
+        {"id": 102, "name": "Meena", "priority": "Critical", "priority_score": 85.0, "created_at": "2026-10-28 10:05:00"},
+        {"id": 103, "name": "Suresh", "priority": "Low", "priority_score": 18.0, "created_at": "2026-10-28 09:50:00"},
+        {"id": 104, "name": "Kavitha", "priority": "High", "priority_score": 58.0, "created_at": "2026-10-28 10:12:00"},
+        {"id": 105, "name": "Deepak", "priority": "Critical", "priority_score": 92.0, "created_at": "2026-10-28 10:15:00"},
+        {"id": 106, "name": "Ananya", "priority": "Critical", "priority_score": 85.0, "created_at": "2026-10-28 10:01:00"}
+    ]
+    sorted_cases = merge_sort_requests(sample_cases)
+
+    # 2. Binary Search Demonstration
+    demo_ids = [10, 22, 35, 47, 53, 68, 74, 89, 91, 105, 120]
+    sorted_reqs_for_bs = [{"id": x, "label": f"Incident #{x}"} for x in demo_ids]
+    bs_target = 68
+    bs_found, bs_steps, bs_trace = binary_search_request_by_id(sorted_reqs_for_bs, bs_target, collect_trace=True)
+
+    # 3. Priority Queue Demonstration
+    pq_demo = EmergencyPriorityQueue()
+    for case in sample_cases:
+        pq_demo.push(case)
+    pq_root = pq_demo.peek()
+    pq_heap_before = pq_demo.to_list()
+    pq_popped = pq_demo.pop()
+    pq_heap_after = pq_demo.to_list()
+
+    # 4. Dijkstra Shortest Path Demonstration (Disaster Safe Routing)
+    from routing import build_manual_disaster_graph
+    demo_hazards = [{
+        "name": "Town Hall Underpass Flooding",
+        "latitude": 10.9980,
+        "longitude": 76.9610,
+        "severity": "Flooded / Closed"
+    }]
+    clean_graph = build_manual_disaster_graph(active_hazards=[])
+    dijkstra_clean = dijkstra_shortest_path(clean_graph, "gandhipuram_hub", "singanallur_hub", collect_trace=True)
+
+    hazard_graph = build_manual_disaster_graph(active_hazards=demo_hazards)
+    dijkstra_hazards = dijkstra_shortest_path(hazard_graph, "gandhipuram_hub", "singanallur_hub", collect_trace=True)
+
+    # 5. Graph Traversals: BFS & DFS
+    bfs_result = bfs_traversal(clean_graph, "gandhipuram_hub", max_hops=3, collect_trace=True)
+    dfs_result = dfs_traversal(clean_graph, "gandhipuram_hub", target_node="singanallur_hub", collect_trace=True)
+
+    return jsonify({
+        "success": True,
+        "algorithms": {
+            "merge_sort": {
+                "name": "Recursive Merge Sort",
+                "time_complexity": "O(N log N)",
+                "space_complexity": "O(N)",
+                "input_count": len(sample_cases),
+                "input_sample": sample_cases,
+                "sorted_output": sorted_cases
+            },
+            "binary_search": {
+                "name": "Iterative Binary Search",
+                "time_complexity": "O(log N)",
+                "space_complexity": "O(1)",
+                "search_space": demo_ids,
+                "target_id": bs_target,
+                "found": bs_found is not None,
+                "steps_taken": bs_steps,
+                "trace": bs_trace
+            },
+            "priority_queue": {
+                "name": "Array-Based Binary Max-Heap (Priority Queue)",
+                "time_complexity": "O(1) peek, O(log N) push/pop",
+                "root_peek": pq_root,
+                "popped_highest_priority": pq_popped,
+                "heap_array_length_before": len(pq_heap_before),
+                "heap_array_length_after": len(pq_heap_after)
+            },
+            "dijkstra": {
+                "name": "Dijkstra Shortest Path with Binary Min-Heap",
+                "time_complexity": "O((V + E) log V)",
+                "space_complexity": "O(V)",
+                "start": "gandhipuram_hub",
+                "destination": "singanallur_hub",
+                "unpenalized_route": {
+                    "path": dijkstra_clean["path"],
+                    "distance_km": dijkstra_clean["distance"]
+                },
+                "hazard_penalized_route": {
+                    "path": dijkstra_hazards["path"],
+                    "distance_km": dijkstra_hazards["distance"],
+                    "hazard_alerts": dijkstra_hazards["hazard_alerts"]
+                }
+            },
+            "graph_traversals": {
+                "name": "BFS Level-Order & DFS Depth-First Exploration",
+                "time_complexity": "O(V + E)",
+                "space_complexity": "O(V)",
+                "start_node": "gandhipuram_hub",
+                "bfs_wave_order": bfs_result["visited_order"],
+                "bfs_hop_distances": bfs_result["hop_distances"],
+                "dfs_order": dfs_result["visited_order"],
+                "dfs_path_to_singanallur": dfs_result["path_to_target"]
+            }
+        }
+    })
+
+
+@app.route("/dsa")
+def dsa_presentation_page():
+    """
+    Dedicated ADSA algorithms presentation & interactive lab page.
+    Renders live execution controls, math explanations, and algorithm visualizations.
+    """
+    return render_template("dsa_lab.html")
 
 
 # =========================================================

@@ -26,6 +26,8 @@ from typing import Dict, Any, List, Optional, Tuple
 import networkx as nx
 import requests
 
+from algorithms.dijkstra import AdjacencyListGraph, dijkstra_shortest_path
+
 logger = logging.getLogger("SmartFloodRouting")
 
 # Regional Road Transit Nodes for Greater Coimbatore Emergency Network
@@ -179,6 +181,46 @@ def build_disaster_graph(active_hazards: Optional[List[Dict[str, Any]]] = None) 
         G.add_edge(u, v, weight=weight, base_distance=base_dist, hazard_note=hazard_note)
 
     return G
+
+
+def build_manual_disaster_graph(active_hazards: Optional[List[Dict[str, Any]]] = None) -> AdjacencyListGraph:
+    """
+    Constructs Coimbatore regional AdjacencyListGraph with hazard penalties applied to edges.
+    Powers manual Dijkstra algorithm without external graph library dependencies.
+    """
+    graph = AdjacencyListGraph(directed=False)
+
+    for node_id, data in COIMBATORE_ROAD_NODES.items():
+        graph.add_node(node_id, **data)
+
+    hazards = active_hazards or []
+
+    for u, v, base_dist in COIMBATORE_ROAD_EDGES:
+        u_data = COIMBATORE_ROAD_NODES[u]
+        v_data = COIMBATORE_ROAD_NODES[v]
+        mid_lat = (u_data["lat"] + v_data["lat"]) / 2.0
+        mid_lon = (u_data["lon"] + v_data["lon"]) / 2.0
+
+        weight = base_dist
+        hazard_note = None
+
+        for h in hazards:
+            h_lat = h.get("latitude")
+            h_lon = h.get("longitude")
+            if h_lat is not None and h_lon is not None:
+                d_hazard = haversine_distance(mid_lat, mid_lon, float(h_lat), float(h_lon))
+                if d_hazard <= 1.5:
+                    sev = str(h.get("severity", "")).lower()
+                    if "closed" in sev or "flooded" in sev:
+                        weight *= 100.0
+                        hazard_note = f"Segment {u} - {v} near reported flooding ({h.get('name', 'Hazard')})"
+                    elif "caution" in sev:
+                        weight *= 3.0
+                        hazard_note = f"Segment {u} - {v} under caution ({h.get('name', 'Hazard')})"
+
+        graph.add_edge(u, v, weight=weight, base_distance=base_dist, hazard_note=hazard_note)
+
+    return graph
 
 
 def build_dynamic_corridor_graph(
@@ -417,13 +459,12 @@ def plan_evacuation_route(
         }
 
     # -------------------------------------------------------------
-    # 2. Fallback Attempt: Offline NetworkX Dijkstra Routing
+    # 2. Fallback Attempt: Offline Dijkstra Graph Routing (Manual Engine)
     # -------------------------------------------------------------
-    logger.info("OSRM unreachable or offline. Using NetworkX Disaster Dijkstra Graph.")
+    logger.info("OSRM unreachable or offline. Using Offline Dijkstra Routing Engine.")
 
     if is_in_coimbatore_region(s_lat, s_lon) and is_in_coimbatore_region(d_lat, d_lon):
         # Predefined Coimbatore high-resolution arterial transit network
-        G = build_disaster_graph(hazards)
         start_node, d_start = find_nearest_node(s_lat, s_lon)
         end_node, d_end = find_nearest_node(d_lat, d_lon)
 
@@ -432,27 +473,57 @@ def plan_evacuation_route(
         hazard_alerts: List[str] = []
 
         try:
-            path = nx.dijkstra_path(G, start_node, end_node, weight="weight")
-            for i in range(len(path) - 1):
-                u, v = path[i], path[i+1]
-                edge_data = G[u][v]
-                total_km += edge_data.get("base_distance", 1.0)
-                if edge_data.get("hazard_note"):
-                    hazard_alerts.append(edge_data["hazard_note"])
+            # Primary: Manual Dijkstra Shortest Path using AdjacencyListGraph & Binary Min-Heap
+            manual_G = build_manual_disaster_graph(hazards)
+            dijkstra_res = dijkstra_shortest_path(manual_G, start_node, end_node)
 
-            for node_id in path:
-                nd = COIMBATORE_ROAD_NODES[node_id]
-                graph_coords.append([nd["lat"], nd["lon"]])
+            if dijkstra_res.get("success") and dijkstra_res.get("path"):
+                path = dijkstra_res["path"]
+                for i in range(len(path) - 1):
+                    u, v = path[i], path[i+1]
+                    for edge in manual_G.neighbors(u):
+                        if edge["to"] == v:
+                            total_km += edge.get("base_distance", 1.0)
+                            if edge.get("hazard_note"):
+                                hazard_alerts.append(edge["hazard_note"])
+                            break
 
-            graph_coords.append([d_lat, d_lon])
-            total_km += d_end
+                for node_id in path:
+                    nd = COIMBATORE_ROAD_NODES[node_id]
+                    graph_coords.append([nd["lat"], nd["lon"]])
 
-        except nx.NetworkXNoPath:
-            graph_coords = [[s_lat, s_lon], [d_lat, d_lon]]
-            total_km = direct_dist
-            warnings.append("No viable path on regional road network. Corridor line displayed.")
+                graph_coords.append([d_lat, d_lon])
+                total_km += d_end
+                engine_name = "Manual Binary Min-Heap Dijkstra Engine (Disaster Safe)"
+            else:
+                raise nx.NetworkXNoPath("No path found via manual Dijkstra")
 
-        engine_name = "NetworkX Coimbatore Arterial Dijkstra Engine (Offline Safe)"
+        except Exception as e:
+            # Fallback to NetworkX if manual search encounters an unexpected issue
+            logger.warning(f"Manual Dijkstra fallback to NetworkX: {e}")
+            G = build_disaster_graph(hazards)
+            try:
+                path = nx.dijkstra_path(G, start_node, end_node, weight="weight")
+                for i in range(len(path) - 1):
+                    u, v = path[i], path[i+1]
+                    edge_data = G[u][v]
+                    total_km += edge_data.get("base_distance", 1.0)
+                    if edge_data.get("hazard_note"):
+                        hazard_alerts.append(edge_data["hazard_note"])
+
+                for node_id in path:
+                    nd = COIMBATORE_ROAD_NODES[node_id]
+                    graph_coords.append([nd["lat"], nd["lon"]])
+
+                graph_coords.append([d_lat, d_lon])
+                total_km += d_end
+                engine_name = "NetworkX Coimbatore Arterial Dijkstra Engine (Offline Safe)"
+
+            except nx.NetworkXNoPath:
+                graph_coords = [[s_lat, s_lon], [d_lat, d_lon]]
+                total_km = direct_dist
+                warnings.append("No viable path on regional road network. Corridor line displayed.")
+                engine_name = "NetworkX Coimbatore Arterial Dijkstra Engine (Offline Safe)"
 
     else:
         # Dynamic location-agnostic waypoint corridor (Chennai, Bengaluru, Mumbai, etc.)
