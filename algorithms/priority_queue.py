@@ -118,6 +118,14 @@ class BinaryHeap:
             else:
                 break
 
+    def heapify_up(self, index: int) -> None:
+        """Public alias for heapify_up."""
+        self._heapify_up(index)
+
+    def heapify_down(self, index: int) -> None:
+        """Public alias for heapify_down."""
+        self._heapify_down(index)
+
     def to_list(self) -> List[Any]:
         """Returns a shallow copy of the underlying heap array representation."""
         return list(self._heap)

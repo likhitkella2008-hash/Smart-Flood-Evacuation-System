@@ -90,6 +90,25 @@ class TestGraphTraversals(unittest.TestCase):
         dfs_res = dfs_traversal(cyclic_g, "1")
         self.assertEqual(len(dfs_res["visited_order"]), 3)
 
+    def test_single_isolated_node_graph(self):
+        """Single isolated node returns distance 0 and reachable single node."""
+        g = AdjacencyListGraph()
+        g.add_node("Isolated_Hub")
+        bfs_res = bfs_traversal(g, "Isolated_Hub")
+        self.assertEqual(bfs_res["reachable_nodes"], ["Isolated_Hub"])
+        self.assertEqual(bfs_res["hop_distances"]["Isolated_Hub"], 0)
+
+        dfs_res = dfs_traversal(g, "Isolated_Hub")
+        self.assertEqual(dfs_res["visited_order"], ["Isolated_Hub"])
+
+    def test_missing_start_node_raises_key_error(self):
+        """Non-existent start node raises KeyError."""
+        g = AdjacencyListGraph()
+        with self.assertRaises(KeyError):
+            bfs_traversal(g, "Missing_Node")
+        with self.assertRaises(KeyError):
+            dfs_traversal(g, "Missing_Node")
+
     def test_connected_components(self):
         """Identifies separate disconnected components."""
         g = AdjacencyListGraph()

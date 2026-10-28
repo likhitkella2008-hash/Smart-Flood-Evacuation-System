@@ -11,6 +11,7 @@ Genuine, from-scratch Python implementations of core ADSA algorithms:
 """
 
 from algorithms.merge_sort import (
+    merge_sort,
     merge_sort_requests,
     merge_sort_by_key,
     compare_emergency_requests,
@@ -18,6 +19,7 @@ from algorithms.merge_sort import (
 )
 
 from algorithms.binary_search import (
+    binary_search,
     binary_search_request_by_id,
     binary_search_ids,
     is_sorted_by_id
@@ -49,10 +51,12 @@ from algorithms.nearest_resource import (
 )
 
 __all__ = [
+    "merge_sort",
     "merge_sort_requests",
     "merge_sort_by_key",
     "compare_emergency_requests",
     "get_priority_rank",
+    "binary_search",
     "binary_search_request_by_id",
     "binary_search_ids",
     "is_sorted_by_id",

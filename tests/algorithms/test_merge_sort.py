@@ -4,6 +4,7 @@ Unit tests for Manual Recursive Merge Sort (algorithms/merge_sort.py)
 
 import unittest
 from algorithms.merge_sort import (
+    merge_sort,
     merge_sort_requests,
     merge_sort_by_key,
     compare_emergency_requests,
@@ -13,6 +14,24 @@ from algorithms.merge_sort import (
 
 class TestMergeSort(unittest.TestCase):
     """Verifies manual recursive Merge Sort implementation."""
+
+    def test_generic_merge_sort_empty_and_single(self):
+        """Standard merge_sort handles empty and single-element lists."""
+        self.assertEqual(merge_sort([]), [])
+        self.assertEqual(merge_sort([42]), [42])
+
+    def test_generic_merge_sort_already_sorted_and_reversed(self):
+        """Standard merge_sort correctly sorts already-sorted and reverse-sorted lists."""
+        already_sorted = [1, 2, 3, 4, 5, 6]
+        self.assertEqual(merge_sort(already_sorted), [1, 2, 3, 4, 5, 6])
+
+        reversed_list = [6, 5, 4, 3, 2, 1]
+        self.assertEqual(merge_sort(reversed_list), [1, 2, 3, 4, 5, 6])
+
+    def test_generic_merge_sort_with_duplicates(self):
+        """Standard merge_sort sorts arrays with multiple duplicate values."""
+        raw = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5]
+        self.assertEqual(merge_sort(raw), [1, 1, 2, 3, 3, 4, 5, 5, 5, 6, 9])
 
     def test_empty_list(self):
         """Empty input returns empty list without error."""

@@ -23,6 +23,52 @@ PRIORITY_CATEGORY_RANKS: Dict[str, int] = {
 }
 
 
+def merge_sort(arr: List[Any]) -> List[Any]:
+    """
+    Standard generic recursive divide-and-conquer Merge Sort for comparable items.
+
+    Time Complexity:
+        Best Case:    O(N log N)
+        Average Case: O(N log N)
+        Worst Case:   O(N log N)
+    Space Complexity: O(N) auxiliary space
+
+    Args:
+        arr: List of comparable elements (numbers, strings).
+
+    Returns:
+        A new list containing elements in sorted ascending order.
+    """
+    if len(arr) <= 1:
+        return list(arr)
+
+    mid = len(arr) // 2
+    left_sorted = merge_sort(arr[:mid])
+    right_sorted = merge_sort(arr[mid:])
+
+    merged: List[Any] = []
+    i = j = 0
+
+    # Two-pointer linear merge step: O(len(left) + len(right))
+    while i < len(left_sorted) and j < len(right_sorted):
+        # Stable sort: <= ensures relative order of equal keys is preserved
+        if left_sorted[i] <= right_sorted[j]:
+            merged.append(left_sorted[i])
+            i += 1
+        else:
+            merged.append(right_sorted[j])
+            j += 1
+
+    while i < len(left_sorted):
+        merged.append(left_sorted[i])
+        i += 1
+    while j < len(right_sorted):
+        merged.append(right_sorted[j])
+        j += 1
+
+    return merged
+
+
 def get_priority_rank(category: Optional[str]) -> int:
     """Returns numerical rank for a priority category (1=Critical ... 4=Low)."""
     if not category:

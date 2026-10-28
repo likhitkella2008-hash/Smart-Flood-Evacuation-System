@@ -15,6 +15,38 @@ Space Complexity: O(1)        (Iterative implementation, in-place index pointers
 from typing import Any, Dict, List, Optional, Tuple
 
 
+def binary_search(arr: List[Any], target: Any) -> int:
+    """
+    Standard manual iterative Binary Search returning 0-based index of target, or -1 if absent.
+
+    Time Complexity:
+        Best Case:    O(1)
+        Average Case: O(log N)
+        Worst Case:   O(log N)
+    Space Complexity: O(1) auxiliary space (in-place iterative pointer manipulation)
+
+    Precondition:
+        Input list 'arr' must be sorted in ascending order.
+    """
+    if not arr:
+        return -1
+
+    low = 0
+    high = len(arr) - 1
+
+    while low <= high:
+        mid = (low + high) // 2
+
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            low = mid + 1
+        else:
+            high = mid - 1
+
+    return -1
+
+
 def is_sorted_by_id(requests: List[Dict[str, Any]]) -> bool:
     """Verifies whether the list of requests is strictly sorted in ascending order of ID."""
     for i in range(len(requests) - 1):

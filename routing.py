@@ -27,6 +27,7 @@ import networkx as nx
 import requests
 
 from algorithms.dijkstra import AdjacencyListGraph, dijkstra_shortest_path
+from algorithms.graph_traversal import bfs_traversal, dfs_traversal, find_connected_components
 
 logger = logging.getLogger("SmartFloodRouting")
 
@@ -221,6 +222,42 @@ def build_manual_disaster_graph(active_hazards: Optional[List[Dict[str, Any]]] =
         graph.add_edge(u, v, weight=weight, base_distance=base_dist, hazard_note=hazard_note)
 
     return graph
+
+
+def check_evacuation_connectivity(
+    start_node: str = "gandhipuram_hub",
+    active_hazards: Optional[List[Dict[str, Any]]] = None
+) -> Dict[str, Any]:
+    """
+    Evaluates topological reachability and detects isolated flood islands using manual BFS and DFS.
+    Does NOT calculate minimum-weight vehicle routes (which is handled by Dijkstra).
+
+    Practical Application:
+    - Verifies whether evacuation safe havens are connected to emergency dispatch hubs.
+    - Identifies isolated road sectors cut off by floodwaters.
+    """
+    graph = build_manual_disaster_graph(active_hazards)
+    if start_node not in graph.nodes:
+        start_node = "gandhipuram_hub"
+
+    bfs_res = bfs_traversal(graph, start_node)
+    reachable = set(bfs_res.get("reachable_nodes", []))
+    all_nodes = set(graph.nodes.keys())
+    isolated = list(all_nodes - reachable)
+    components = find_connected_components(graph)
+
+    return {
+        "success": True,
+        "start_node": start_node,
+        "reachable_nodes": list(reachable),
+        "reachable_count": len(reachable),
+        "total_nodes": len(all_nodes),
+        "isolated_nodes": isolated,
+        "hop_distances": bfs_res.get("hop_distances", {}),
+        "connected_components_count": len(components),
+        "is_fully_connected": len(isolated) == 0,
+        "algorithm": "Manual Breadth-First Search (O(V + E))"
+    }
 
 
 def build_dynamic_corridor_graph(

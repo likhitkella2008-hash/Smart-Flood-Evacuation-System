@@ -11,7 +11,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # Modular Domain Engines
 from prioritization import calculate_priority
 from flood_risk import assess_flood_risk
-from routing import plan_evacuation_route
+from routing import plan_evacuation_route, check_evacuation_connectivity
 from notifications import notification_service
 from migrate import migrate_database
 from shelter_discovery import discover_potential_shelters, haversine_distance
@@ -2164,6 +2164,25 @@ def admin_dispatch_pop_next():
         "remaining_queue_size": len(pq),
         "algorithm": "EmergencyPriorityQueue.pop() with Sift-Down (O(log N))"
     })
+
+
+@app.route("/api/network/connectivity")
+def api_network_connectivity():
+    """
+    Evaluates topological road accessibility and identifies flood-isolated zones
+    using manual Breadth-First Search (BFS) and connected components exploration.
+    Uses active database flood hazard reports.
+    """
+    origin = request.args.get("start_node", "gandhipuram_hub")
+
+    conn = db()
+    hazards_rows = conn.execute("SELECT * FROM road_hazards WHERE active = 1").fetchall()
+    conn.close()
+
+    hazards = [dict(h) for h in hazards_rows]
+    report = check_evacuation_connectivity(start_node=origin, active_hazards=hazards)
+
+    return jsonify(report)
 
 
 @app.route("/api/dsa/demo")

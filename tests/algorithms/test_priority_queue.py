@@ -70,6 +70,19 @@ class TestPriorityQueue(unittest.TestCase):
         top = pq.pop()
         self.assertEqual(top["id"], 4)
 
+    def test_equal_priority_tie_breaking(self):
+        """Equal category and score broken by earlier created_at / lower ID."""
+        pq = EmergencyPriorityQueue()
+        # Same category and score; req 10 has earlier timestamp
+        pq.push({"id": 20, "priority": "High", "priority_score": 50.0, "created_at": "2026-10-28 10:30:00"})
+        pq.push({"id": 10, "priority": "High", "priority_score": 50.0, "created_at": "2026-10-28 10:00:00"})
+
+        # Earlier created_at should come out first
+        first = pq.pop()
+        self.assertEqual(first["id"], 10)
+        second = pq.pop()
+        self.assertEqual(second["id"], 20)
+
     def test_pop_empty_queue_raises_error(self):
         """Popping empty heap raises IndexError."""
         pq = EmergencyPriorityQueue()

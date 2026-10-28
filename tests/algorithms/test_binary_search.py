@@ -4,6 +4,7 @@ Unit tests for Manual Iterative Binary Search (algorithms/binary_search.py)
 
 import unittest
 from algorithms.binary_search import (
+    binary_search,
     binary_search_request_by_id,
     binary_search_ids,
     is_sorted_by_id
@@ -12,6 +13,17 @@ from algorithms.binary_search import (
 
 class TestBinarySearch(unittest.TestCase):
     """Verifies manual iterative Binary Search implementation."""
+
+    def test_standard_binary_search(self):
+        """Verifies binary_search(arr, target) matches required specifications."""
+        arr = [10, 20, 30, 40, 50, 60, 70]
+        self.assertEqual(binary_search(arr, 10), 0)   # first element
+        self.assertEqual(binary_search(arr, 40), 3)   # midpoint
+        self.assertEqual(binary_search(arr, 70), 6)   # last element
+        self.assertEqual(binary_search(arr, 99), -1)  # not found
+        self.assertEqual(binary_search([], 42), -1)   # empty list
+        self.assertEqual(binary_search([5], 5), 0)    # single element found
+        self.assertEqual(binary_search([5], 8), -1)   # single element not found
 
     def setUp(self):
         self.sample_ids = [5, 12, 19, 27, 34, 45, 58, 62, 79, 88, 93, 101]
