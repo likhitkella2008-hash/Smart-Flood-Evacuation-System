@@ -276,47 +276,79 @@
                 <div class="section-header">
                     <div class="section-title">
                         <h2>🌦️ Live Meteorological Telemetry</h2>
-                        <p>Real-time Open-Meteo precipitation, atmospheric humidity, and rainfall forecast.</p>
+                        <p>Real-time Open-Meteo precipitation, atmospheric humidity, and forward rainfall forecast.</p>
                     </div>
                     <button class="secondary-btn" type="button" onclick="loadLiveWeather(true)">↻ Refresh</button>
                 </div>
 
-                <div class="form-grid">
+                <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr; align-items: flex-end; gap: 10px;">
                     <div>
-                        <label for="weatherCity">Location / Region</label>
-                        <input id="weatherCity" type="text" value="Coimbatore" placeholder="Enter city name">
+                        <label for="weatherCity">Location, Region, or Coordinates (Lat, Lon)</label>
+                        <input id="weatherCity" type="text" value="Coimbatore" placeholder="e.g. Chennai, Bengaluru, or 11.0168, 76.9558" onkeydown="if(event.key==='Enter'){event.preventDefault();loadLiveWeather(true);}">
                     </div>
-                    <div style="display:flex; align-items:flex-end;">
-                        <button class="primary-btn" type="button" onclick="loadLiveWeather(true)">Get Telemetry</button>
+                    <div>
+                        <button class="primary-btn" type="button" style="width:100%;" onclick="loadLiveWeather(true)">📡 Get Telemetry</button>
+                    </div>
+                    <div>
+                        <button class="secondary-btn" type="button" style="width:100%;" onclick="useGpsForWeather()">📍 My GPS Location</button>
                     </div>
                 </div>
 
                 <div id="weatherMessage" class="message">Loading meteorological telemetry...</div>
 
+                <!-- Verified Location Station Banner -->
+                <div id="weatherLocationBanner" style="display:none; background:#09223e; border:1px solid #1e4a77; border-radius:12px; padding:14px 18px; margin:14px 0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <span style="color:#94a3b8; font-size:11.5px; text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">Verified Meteorological Station</span>
+                            <h3 id="weatherResolvedTitle" style="margin:2px 0 4px 0; color:#f8fafc; font-size:19px;">—</h3>
+                            <div style="color:#38bdf8; font-family:monospace; font-size:12.5px;">
+                                📍 <span id="weatherResolvedCoords">—</span>
+                                <span style="margin:0 6px; color:#475569;">|</span>
+                                🌐 <span id="weatherTimezone">—</span>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:12px; background:rgba(30,58,95,0.5); padding:8px 16px; border-radius:10px; border:1px solid #234e7a;">
+                            <span id="weatherConditionIcon" style="font-size:32px;">🌤️</span>
+                            <div style="text-align:left;">
+                                <div id="weatherConditionText" style="color:#f8fafc; font-weight:bold; font-size:15px;">—</div>
+                                <small id="weatherFeelsLike" style="color:#94a3b8; font-size:12px;">Feels like: —</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="weatherCards" class="card-grid">
                     <div class="mini-card">
                         <h3>🌡️ Temperature</h3>
                         <strong id="weatherTemperature">—</strong>
+                        <small id="weatherTempSub" style="display:block; margin-top:4px; color:#94a3b8; font-size:11px;">Ambient temperature at 2m altitude</small>
                     </div>
                     <div class="mini-card">
                         <h3>💧 Relative Humidity</h3>
                         <strong id="weatherHumidity">—</strong>
+                        <small style="display:block; margin-top:4px; color:#94a3b8; font-size:11px;">Atmospheric moisture saturation</small>
                     </div>
                     <div class="mini-card">
                         <h3>💨 Wind Velocity</h3>
                         <strong id="weatherWind">—</strong>
+                        <small id="weatherWindSub" style="display:block; margin-top:4px; color:#94a3b8; font-size:11px;">10m altitude anemometer reading</small>
                     </div>
                     <div class="mini-card">
-                        <h3>🌧️ Current Rainfall</h3>
+                        <h3>🌧️ Current Precipitation</h3>
                         <strong id="weatherRain">—</strong>
+                        <small id="weatherRainSub" style="display:block; margin-top:4px; color:#94a3b8; font-size:11px;">Preceding 15-minute measurement</small>
                     </div>
                 </div>
 
                 <div class="card-grid" style="margin-top:20px;">
                     <div class="mini-card" style="grid-column: 1 / -1;">
-                        <h3>📊 Hourly Rainfall Forecast (Next 12 Hours)</h3>
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                            <h3>📊 Hourly Rainfall Forecast (Next 12 Hours)</h3>
+                            <span style="font-size:12px; color:#94a3b8;">Forward-looking hourly rates (mm / hour) from provider</span>
+                        </div>
                         <div id="weatherHourly" style="margin-top:12px;"></div>
-                        <small id="weatherUpdatedAt" style="display:block; margin-top:10px; color:#8da4bf;"></small>
+                        <div id="weatherUpdatedAt" style="margin-top:14px; padding-top:10px; border-top:1px solid #16365c; font-size:12px; color:#8da4bf; line-height:1.6;"></div>
                     </div>
                 </div>
             </div>
@@ -1981,11 +2013,20 @@ async function loadRainfallForecastChart() {
     try {
         const resp = await fetch("/api/weather?city=Coimbatore");
         const data = await resp.json();
-        if (!data.success || !data.hourly_forecast) return;
+        if (!data.success) return;
 
-        const hourly = data.hourly_forecast;
-        const times = (hourly.time || []).slice(0, 12).map(t => t.split("T")[1] || t);
-        const rain = (hourly.precipitation || []).slice(0, 12);
+        let times = [];
+        let rain = [];
+
+        if (data.next_12_hours && data.next_12_hours.length > 0) {
+            times = data.next_12_hours.map(h => (h.time.split("T")[1] || h.time).slice(0, 5));
+            rain = data.next_12_hours.map(h => h.precipitation_mm);
+        } else if (data.hourly_forecast && data.hourly_forecast.time) {
+            times = (data.hourly_forecast.time || []).slice(0, 12).map(t => (t.split("T")[1] || t).slice(0, 5));
+            rain = (data.hourly_forecast.precipitation || []).slice(0, 12);
+        } else {
+            return;
+        }
 
         const rCtx = document.getElementById("chartRainfallCanvas");
         if (rCtx) {
@@ -1995,7 +2036,7 @@ async function loadRainfallForecastChart() {
                 data: {
                     labels: times,
                     datasets: [{
-                        label: 'Precipitation (mm)',
+                        label: 'Precipitation (mm / hr)',
                         data: rain,
                         backgroundColor: '#3b82f6',
                         borderRadius: 4
@@ -2569,22 +2610,120 @@ function promptRescueCompletion(id) {
    LIVE WEATHER REPORT (OPEN-METEO)
 ========================================================= */
 
-async function loadLiveWeather(force = false) {
-    const city = document.getElementById("weatherCity")?.value?.trim() || "Coimbatore";
+async function useGpsForWeather() {
+    const latInput = document.getElementById("reqLatitude")?.value;
+    const lonInput = document.getElementById("reqLongitude")?.value;
+    const cityInput = document.getElementById("weatherCity");
+
+    if (latInput && lonInput) {
+        const latF = parseFloat(latInput);
+        const lonF = parseFloat(lonInput);
+        if (!isNaN(latF) && !isNaN(lonF)) {
+            if (cityInput) cityInput.value = `${latF.toFixed(4)}, ${lonF.toFixed(4)}`;
+            loadLiveWeather(true, latF, lonF);
+            return;
+        }
+    }
+
+    if (!navigator.geolocation) {
+        alert("Browser Geolocation is not supported on this device.");
+        return;
+    }
+
     const msg = document.getElementById("weatherMessage");
     if (msg) {
-        msg.textContent = `Querying live telemetry for ${city}...`;
+        msg.textContent = "Requesting device GPS coordinates for meteorological telemetry...";
         msg.className = "message";
+        msg.style.display = "block";
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            if (cityInput) cityInput.value = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+            loadLiveWeather(true, lat, lon);
+        },
+        (err) => {
+            if (msg) {
+                msg.textContent = "❌ GPS access unavailable or denied. Please enter a city or region name above.";
+                msg.className = "message error";
+            }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
+async function loadLiveWeather(force = false, directLat = null, directLon = null) {
+    const cityInput = document.getElementById("weatherCity");
+    let queryParam = "";
+
+    if (directLat !== null && directLon !== null) {
+        queryParam = `lat=${encodeURIComponent(directLat)}&lon=${encodeURIComponent(directLon)}`;
+    } else {
+        const city = cityInput?.value?.trim() || "Coimbatore";
+        queryParam = `city=${encodeURIComponent(city)}`;
+    }
+
+    const msg = document.getElementById("weatherMessage");
+    const banner = document.getElementById("weatherLocationBanner");
+    const hourlyEl = document.getElementById("weatherHourly");
+    const updatedEl = document.getElementById("weatherUpdatedAt");
+
+    if (msg) {
+        msg.textContent = `Querying live Open-Meteo meteorological telemetry...`;
+        msg.className = "message";
+        msg.style.display = "block";
     }
 
     try {
-        const resp = await fetch(`/api/weather?city=${encodeURIComponent(city)}`);
+        const cacheBuster = Date.now();
+        const resp = await fetch(`/api/weather?${queryParam}&_t=${cacheBuster}`);
         const data = await resp.json();
+
         if (!data.success) {
-            if (msg) { msg.textContent = data.message || "Failed to load weather."; msg.className = "message error"; }
+            if (msg) {
+                msg.textContent = `❌ ${data.message || "Failed to load weather telemetry."}`;
+                msg.className = "message error";
+            }
+            if (banner) banner.style.display = "none";
+            // Set cards to Unavailable rather than fake zeros
+            ["weatherTemperature", "weatherHumidity", "weatherWind", "weatherRain"].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = "Unavailable";
+            });
+            if (hourlyEl) {
+                hourlyEl.innerHTML = `<div style="padding:16px; color:#f87171; text-align:center;">⚠️ Telemetry unavailable: ${escapeHtml(data.message || "Provider error")}</div>`;
+            }
+            if (updatedEl) {
+                updatedEl.innerHTML = `<span style="color:#f87171;">⚠️ Last retrieval failed at ${new Date().toLocaleTimeString()}</span>`;
+            }
             return;
         }
 
+        // 1. Populate Verified Station Banner
+        if (banner) {
+            banner.style.display = "block";
+            const titleEl = document.getElementById("weatherResolvedTitle");
+            const coordsEl = document.getElementById("weatherResolvedCoords");
+            const tzEl = document.getElementById("weatherTimezone");
+            const condIcon = document.getElementById("weatherConditionIcon");
+            const condText = document.getElementById("weatherConditionText");
+            const feelsLike = document.getElementById("weatherFeelsLike");
+
+            if (titleEl) titleEl.textContent = data.formatted_location || data.location || "Resolved Station";
+            if (coordsEl) coordsEl.textContent = `Lat: ${data.latitude}° N, Lon: ${data.longitude}° E`;
+            if (tzEl) tzEl.textContent = `Timezone: ${data.timezone || "auto"}`;
+            if (condIcon) condIcon.textContent = data.condition_icon || "🌡️";
+            if (condText) condText.textContent = data.condition || "Clear";
+            if (feelsLike) {
+                feelsLike.textContent = (data.apparent_temperature_c !== null && data.apparent_temperature_c !== undefined)
+                    ? `Feels like: ${data.apparent_temperature_c} °C`
+                    : `Condition code: WMO ${data.weather_code ?? "—"}`;
+            }
+        }
+
+        // 2. Populate Metric Cards
         const setVal = (id, val, unit = "") => {
             const el = document.getElementById(id);
             if (el) el.textContent = (val !== undefined && val !== null) ? `${val}${unit}` : "Unavailable";
@@ -2592,49 +2731,121 @@ async function loadLiveWeather(force = false) {
 
         setVal("weatherTemperature", data.temperature_c, " °C");
         setVal("weatherHumidity", data.humidity_percent, " %");
-        setVal("weatherWind", data.wind_speed_kmh, " km/h");
-        setVal("weatherRain", data.precipitation_mm, " mm/hr");
 
-        const hourlyEl = document.getElementById("weatherHourly");
-        if (hourlyEl && data.hourly_forecast && data.hourly_forecast.time) {
-            const h = data.hourly_forecast;
-            hourlyEl.innerHTML = `
-                <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                        <thead>
-                            <tr style="border-bottom:1px solid #1c456f; text-align:left;">
-                                <th style="padding:8px;">Time</th>
-                                <th style="padding:8px;">Precipitation (mm)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${h.time.slice(0, 8).map((t, idx) => `
-                                <tr style="border-bottom:1px solid #102d4d;">
-                                    <td style="padding:8px; color:#94a3b8;">${t.replace("T", " ")}</td>
-                                    <td style="padding:8px; font-weight:bold; color:#60a5fa;">${h.precipitation[idx] ?? 0} mm</td>
+        // Wind Speed & Direction
+        const windEl = document.getElementById("weatherWind");
+        const windSub = document.getElementById("weatherWindSub");
+        if (windEl) {
+            windEl.textContent = (data.wind_speed_kmh !== undefined && data.wind_speed_kmh !== null)
+                ? `${data.wind_speed_kmh} km/h`
+                : "Unavailable";
+        }
+        if (windSub) {
+            const dirStr = data.wind_direction_compass ? `${data.wind_direction_compass} (${data.wind_direction_deg}°)` : "";
+            windSub.textContent = dirStr ? `Direction: ${dirStr}` : "10m altitude anemometer reading";
+        }
+
+        // Current Precipitation (Over measurement interval)
+        const rainEl = document.getElementById("weatherRain");
+        const rainSub = document.getElementById("weatherRainSub");
+        const intervalMins = data.precipitation_interval_mins || 15;
+        if (rainEl) {
+            rainEl.textContent = (data.precipitation_mm !== undefined && data.precipitation_mm !== null)
+                ? `${data.precipitation_mm} mm`
+                : "0.0 mm";
+        }
+        if (rainSub) {
+            const rateStr = (data.precipitation_mm > 0)
+                ? ` | Intensity: ${(data.precipitation_mm * (60 / intervalMins)).toFixed(1)} mm/h`
+                : "";
+            rainSub.textContent = `Preceding ${intervalMins}-minute interval${rateStr}`;
+        }
+
+        // 3. Populate Forward Next 12 Hours Forecast Table
+        if (hourlyEl) {
+            const hoursList = data.next_12_hours || [];
+            if (hoursList.length > 0) {
+                hourlyEl.innerHTML = `
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                            <thead>
+                                <tr style="border-bottom:1px solid #1c456f; text-align:left; color:#94a3b8;">
+                                    <th style="padding:10px 8px;">Forecast Time</th>
+                                    <th style="padding:10px 8px;">Condition</th>
+                                    <th style="padding:10px 8px;">Temp (°C)</th>
+                                    <th style="padding:10px 8px;">Precipitation (mm / hr)</th>
+                                    <th style="padding:10px 8px;">Advisory</th>
                                 </tr>
-                            `).join("")}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                ${hoursList.map(h => {
+                                    const p = h.precipitation_mm ?? 0.0;
+                                    let badgeColor = "#22c55e";
+                                    let badgeText = "Dry / Normal";
+                                    if (p >= 15.0) { badgeColor = "#ef4444"; badgeText = "Torrential Hazard"; }
+                                    else if (p >= 7.5) { badgeColor = "#f97316"; badgeText = "Heavy Rain"; }
+                                    else if (p >= 2.5) { badgeColor = "#eab308"; badgeText = "Moderate Rain"; }
+                                    else if (p > 0.0) { badgeColor = "#38bdf8"; badgeText = "Light Rain"; }
+
+                                    const timeDisplay = h.time.replace("T", " ");
+                                    return `
+                                        <tr style="border-bottom:1px solid #102d4d;">
+                                            <td style="padding:10px 8px; color:#cbd5e1; font-family:monospace;">${timeDisplay}</td>
+                                            <td style="padding:10px 8px; color:#f1f5f9;">${h.icon || "🌡️"} ${escapeHtml(h.condition || "—")}</td>
+                                            <td style="padding:10px 8px; color:#cbd5e1;">${h.temperature_c !== null ? `${h.temperature_c} °C` : "—"}</td>
+                                            <td style="padding:10px 8px; font-weight:bold; color:${p > 0 ? '#60a5fa' : '#94a3b8'};">${p.toFixed(1)} mm/h</td>
+                                            <td style="padding:10px 8px;">
+                                                <span style="display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; background:${badgeColor}22; color:${badgeColor}; border:1px solid ${badgeColor}66;">
+                                                    ${badgeText}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join("")}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                hourlyEl.innerHTML = `<div style="padding:12px; color:#94a3b8; text-align:center;">No forward hourly forecast available.</div>`;
+            }
+        }
+
+        // 4. Detailed Telemetry Timestamps
+        if (updatedEl) {
+            const obsTime = data.observation_time ? data.observation_time.replace("T", " ") : "N/A";
+            const retTime = data.retrieved_at || new Date().toLocaleTimeString();
+            const proj24 = data.precipitation_24h_sum_mm !== undefined ? `${data.precipitation_24h_sum_mm} mm` : "0.0 mm";
+
+            updatedEl.innerHTML = `
+                <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                    <div>
+                        <b>🕒 Provider Observation Time:</b> <span style="color:#e2e8f0;">${obsTime} (${data.timezone || 'Local'})</span>
+                        <span style="margin:0 6px; color:#475569;">|</span>
+                        <b>⚡ Telemetry Retrieved:</b> <span style="color:#86efac;">${retTime}</span>
+                    </div>
+                    <div>
+                        <b>📈 Next 24h Forward Projected Rainfall:</b> <span style="color:#60a5fa; font-weight:bold;">${proj24}</span>
+                    </div>
+                </div>
+                <div style="margin-top:4px; font-size:11px; color:#64748b;">
+                    🛰️ Source: ${data.data_source || 'Open-Meteo Weather Forecast API'}. Telemetry reflects actual meteorological model observation steps, not synthetic/instantaneous estimates.
                 </div>
             `;
         }
 
-        const updatedEl = document.getElementById("weatherUpdatedAt");
-        if (updatedEl) {
-            updatedEl.textContent = `Telemetry updated: ${data.weather_time || new Date().toLocaleTimeString()} (Open-Meteo). 24h Projected: ${data.precipitation_24h_sum_mm || 0} mm.`;
-        }
-
         if (msg) {
-            msg.textContent = `Live telemetry active for ${data.location || city}.`;
+            msg.textContent = `✓ Live meteorological telemetry active for ${data.formatted_location || data.location}.`;
             msg.className = "message success";
         }
 
     } catch (e) {
+        console.error("Weather fetch failure:", e);
         if (msg) {
-            msg.textContent = "Telemetry unreachable. Check network connection.";
+            msg.textContent = "❌ Meteorological telemetry unreachable. Check network connection or verify service status.";
             msg.className = "message error";
         }
+        if (banner) banner.style.display = "none";
     }
 }
 

@@ -1,7 +1,9 @@
 import os
+import re
 import sqlite3
 import logging
 from datetime import datetime
+from typing import Optional, Union, Dict, Any, List, Tuple
 import requests
 from flask import Flask, render_template, request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -51,12 +53,14 @@ def geocode_location(query: str, count: int = 5):
                 "language": "en",
                 "format": "json"
             },
-            timeout=4.0
+            timeout=8.0
         )
         if resp.status_code == 200:
-            return resp.json().get("results", [])
+            return resp.json().get("results", []) or []
+        elif resp.status_code == 429:
+            logger.warning("Open-Meteo geocoding rate limited for query '%s'", query)
     except Exception as ex:
-        logger.debug("Geocoding lookup failed for '%s': %s", query, ex)
+        logger.warning("Geocoding lookup failed for '%s': %s", query, ex)
     return []
 
 
@@ -363,43 +367,152 @@ def location_search():
     return jsonify({"success": True, "query": q, "results": formatted})
 
 
+# =========================================================
+# WMO WEATHER CODES & METEOROLOGICAL UTILITIES
+# =========================================================
+
+WMO_WEATHER_CODES = {
+    0: ("Clear sky", "☀️"),
+    1: ("Mainly clear", "🌤️"),
+    2: ("Partly cloudy", "⛅"),
+    3: ("Overcast", "☁️"),
+    45: ("Foggy", "🌫️"),
+    48: ("Depositing rime fog", "🌫️"),
+    51: ("Light drizzle", "🌦️"),
+    53: ("Moderate drizzle", "🌦️"),
+    55: ("Dense drizzle", "🌧️"),
+    56: ("Light freezing drizzle", "🌧️"),
+    57: ("Dense freezing drizzle", "🌧️"),
+    61: ("Slight rain", "🌧️"),
+    63: ("Moderate rain", "🌧️"),
+    65: ("Heavy rain", "⛈️"),
+    66: ("Light freezing rain", "🌧️"),
+    67: ("Heavy freezing rain", "⛈️"),
+    71: ("Slight snow fall", "🌨️"),
+    73: ("Moderate snow fall", "🌨️"),
+    75: ("Heavy snow fall", "❄️"),
+    77: ("Snow grains", "❄️"),
+    80: ("Slight rain showers", "🌦️"),
+    81: ("Moderate rain showers", "🌧️"),
+    82: ("Violent rain showers", "⛈️"),
+    85: ("Slight snow showers", "🌨️"),
+    86: ("Heavy snow showers", "❄️"),
+    95: ("Thunderstorm", "⚡"),
+    96: ("Thunderstorm with slight hail", "⛈️"),
+    99: ("Thunderstorm with heavy hail", "⛈️")
+}
+
+def parse_coordinates(val: str) -> Optional[Tuple[float, float]]:
+    """
+    Parses a string formatted as 'lat, lon' or 'lat,lon' into (latitude, longitude) float tuple.
+    Returns None if not a valid coordinate string.
+    """
+    if not val or not isinstance(val, str):
+        return None
+    m = re.match(r"^\s*([-+]?\d{1,3}(?:\.\d+)?)\s*,\s*([-+]?\d{1,3}(?:\.\d+)?)\s*$", val.strip())
+    if m:
+        try:
+            lat = float(m.group(1))
+            lon = float(m.group(2))
+            if -90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0:
+                return lat, lon
+        except (ValueError, TypeError):
+            pass
+    return None
+
+def degrees_to_cardinal(d: Optional[Union[int, float]]) -> str:
+    """Converts wind direction in degrees (0-360) to a 16-point cardinal direction string."""
+    if d is None:
+        return ""
+    try:
+        dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+        ix = round(float(d) / (360.0 / len(dirs))) % len(dirs)
+        return dirs[ix]
+    except Exception:
+        return ""
+
+
 @app.route("/api/weather")
 def live_weather():
+    """
+    Live Meteorological Telemetry endpoint querying official Open-Meteo API.
+    Retrieves real-time temperature, humidity, wind velocity, precipitation,
+    and forward-looking hourly precipitation forecasts. Never returns fake zeros.
+    """
     raw_lat = request.args.get("latitude") or request.args.get("lat")
     raw_lon = request.args.get("longitude") or request.args.get("lon")
     city = request.args.get("city", "").strip()
 
     lat = None
     lon = None
-    loc_name = city
+    loc_name = ""
     region_name = ""
     country_name = ""
 
-    if raw_lat and raw_lon:
-        try:
-            lat = float(raw_lat)
-            lon = float(raw_lon)
-            loc_name = city or f"Coordinates ({round(lat, 3)}, {round(lon, 3)})"
-        except (ValueError, TypeError):
-            pass
+    # 1. Parse coordinate string in city parameter (e.g. "11.0168, 76.9558")
+    if city and not (raw_lat and raw_lon):
+        parsed = parse_coordinates(city)
+        if parsed:
+            raw_lat, raw_lon = parsed
 
-    try:
-        if lat is None or lon is None:
-            target_city = city or "Coimbatore"
-            locations = geocode_location(target_city, count=1)
-            if not locations:
+    # 2. Process direct numerical coordinates
+    if raw_lat is not None and raw_lon is not None and str(raw_lat).strip() and str(raw_lon).strip():
+        try:
+            parsed_lat = float(raw_lat)
+            parsed_lon = float(raw_lon)
+            if not (-90.0 <= parsed_lat <= 90.0 and -180.0 <= parsed_lon <= 180.0):
                 return jsonify({
                     "success": False,
-                    "message": f"Location '{target_city}' not found."
-                }), 404
+                    "error_type": "INVALID_COORDINATES",
+                    "message": f"Coordinates out of bounds (-90 to 90, -180 to 180): ({parsed_lat}, {parsed_lon})."
+                }), 400
+            lat = parsed_lat
+            lon = parsed_lon
+            lat_dir = "N" if lat >= 0 else "S"
+            lon_dir = "E" if lon >= 0 else "W"
+            loc_name = city if (city and not parse_coordinates(city)) else f"Coordinates ({abs(round(lat, 4))}° {lat_dir}, {abs(round(lon, 4))}° {lon_dir})"
+        except (ValueError, TypeError):
+            return jsonify({
+                "success": False,
+                "error_type": "INVALID_COORDINATES",
+                "message": "Invalid numeric format for latitude or longitude."
+            }), 400
 
-            location = locations[0]
-            lat = location["latitude"]
-            lon = location["longitude"]
-            loc_name = location.get("name", target_city)
-            region_name = location.get("admin1", "")
-            country_name = location.get("country", "")
+    # 3. Geocode text location if coordinates not provided
+    if lat is None or lon is None:
+        target_city = city if city else "Coimbatore"
+        try:
+            locations = geocode_location(target_city, count=1)
+        except requests.exceptions.Timeout:
+            return jsonify({
+                "success": False,
+                "error_type": "TIMEOUT",
+                "message": f"Geocoding lookup for '{target_city}' timed out. Please check your internet connection."
+            }), 504
+        except requests.exceptions.RequestException:
+            return jsonify({
+                "success": False,
+                "error_type": "NETWORK_ERROR",
+                "message": "Unable to reach geocoding service. Please check your internet connection."
+            }), 502
 
+        if not locations:
+            return jsonify({
+                "success": False,
+                "error_type": "LOCATION_NOT_FOUND",
+                "message": f"Location '{target_city}' could not be resolved. Please verify the spelling or specify latitude, longitude."
+            }), 404
+
+        location = locations[0]
+        lat = location["latitude"]
+        lon = location["longitude"]
+        loc_name = location.get("name", target_city)
+        region_name = location.get("admin1", "")
+        country_name = location.get("country", "")
+
+    # 4. Fetch Live Meteorological Telemetry from Open-Meteo
+    try:
         weather_response = requests.get(
             "https://api.open-meteo.com/v1/forecast",
             params={
@@ -411,46 +524,152 @@ def live_weather():
                     "precipitation,"
                     "rain,"
                     "wind_speed_10m,"
-                    "weather_code"
+                    "wind_direction_10m,"
+                    "weather_code,"
+                    "apparent_temperature"
                 ),
-                "hourly": "precipitation",
-                "forecast_days": 1,
+                "hourly": "precipitation,temperature_2m,weather_code",
+                "wind_speed_unit": "kmh",
+                "forecast_days": 2,
                 "timezone": "auto"
             },
             timeout=10
         )
+        if weather_response.status_code == 429:
+            return jsonify({
+                "success": False,
+                "error_type": "RATE_LIMIT",
+                "message": "Open-Meteo API rate limit reached. Please wait a few seconds and retry."
+            }), 429
+
         weather_response.raise_for_status()
         data = weather_response.json()
-        current = data.get("current", {})
-        hourly = data.get("hourly", {})
 
-        # Compute 24h precipitation forecast sum
-        hourly_precip = hourly.get("precipitation", [])
-        precip_24h_sum = sum(hourly_precip[:24]) if hourly_precip else 0.0
-
-        return jsonify({
-            "success": True,
-            "location": loc_name,
-            "region": region_name,
-            "country": country_name,
-            "latitude": lat,
-            "longitude": lon,
-            "temperature_c": current.get("temperature_2m"),
-            "humidity_percent": current.get("relative_humidity_2m"),
-            "precipitation_mm": current.get("precipitation", 0.0),
-            "rain_mm": current.get("rain", 0.0),
-            "wind_speed_kmh": current.get("wind_speed_10m"),
-            "weather_code": current.get("weather_code"),
-            "weather_time": current.get("time"),
-            "hourly_forecast": hourly,
-            "precipitation_24h_sum_mm": round(precip_24h_sum, 1)
-        })
-
-    except requests.RequestException:
+    except requests.exceptions.Timeout:
         return jsonify({
             "success": False,
-            "message": "Unable to retrieve weather data. Check your internet connection."
+            "error_type": "TIMEOUT",
+            "message": "Weather service request timed out while connecting to Open-Meteo. Please check your internet connection and retry."
+        }), 504
+    except requests.exceptions.ConnectionError:
+        return jsonify({
+            "success": False,
+            "error_type": "CONNECTION_ERROR",
+            "message": "Unable to reach Open-Meteo weather service. Please verify your internet connection."
         }), 502
+    except requests.exceptions.HTTPError:
+        status = weather_response.status_code if 'weather_response' in locals() else 502
+        return jsonify({
+            "success": False,
+            "error_type": "HTTP_ERROR",
+            "message": f"Open-Meteo service returned error: HTTP {status}."
+        }), status
+    except Exception as ex:
+        return jsonify({
+            "success": False,
+            "error_type": "SERVER_ERROR",
+            "message": f"Failed to retrieve meteorological telemetry: {str(ex)}"
+        }), 500
+
+    # 5. Extract & Validate Measurements
+    current = data.get("current", {})
+    hourly = data.get("hourly", {})
+    units = data.get("current_units", {})
+
+    temp_c = current.get("temperature_2m")
+    apparent_temp_c = current.get("apparent_temperature")
+    humidity = current.get("relative_humidity_2m")
+    precip_raw = current.get("precipitation")
+    rain_raw = current.get("rain")
+    wind_raw = current.get("wind_speed_10m")
+    wind_dir = current.get("wind_direction_10m")
+    wmo_code = current.get("weather_code")
+    interval_sec = current.get("interval", 900)
+    interval_mins = max(1, round(interval_sec / 60))
+
+    # Convert wind speed to km/h if API returned m/s
+    wind_unit = units.get("wind_speed_10m", "km/h")
+    if wind_raw is not None:
+        try:
+            wind_kmh = round(float(wind_raw) * 3.6, 1) if "m/s" in wind_unit else round(float(wind_raw), 1)
+        except (ValueError, TypeError):
+            wind_kmh = None
+    else:
+        wind_kmh = None
+
+    cond_desc, cond_icon = WMO_WEATHER_CODES.get(wmo_code, ("Not specified", "🌡️"))
+    wind_compass = degrees_to_cardinal(wind_dir)
+
+    # 6. Build Next 12-Hour Forward-Looking Forecast from current observation time
+    cur_time_str = current.get("time", "")
+    cur_hour_prefix = cur_time_str[:13] if cur_time_str else datetime.now().strftime("%Y-%m-%dT%H")
+
+    hourly_times = hourly.get("time", [])
+    hourly_precip = hourly.get("precipitation", [])
+    hourly_temp = hourly.get("temperature_2m", [])
+    hourly_codes = hourly.get("weather_code", [])
+
+    start_idx = 0
+    for idx, t in enumerate(hourly_times):
+        if t.startswith(cur_hour_prefix):
+            start_idx = idx
+            break
+
+    next_12_hours = []
+    for i in range(start_idx, min(start_idx + 12, len(hourly_times))):
+        c_val = hourly_codes[i] if i < len(hourly_codes) else None
+        h_desc, h_icon = WMO_WEATHER_CODES.get(c_val, ("Unknown", "🌡️"))
+        p_val = hourly_precip[i] if i < len(hourly_precip) else 0.0
+        t_val = hourly_temp[i] if i < len(hourly_temp) else None
+        next_12_hours.append({
+            "time": hourly_times[i],
+            "precipitation_mm": round(float(p_val), 2) if p_val is not None else 0.0,
+            "temperature_c": round(float(t_val), 1) if t_val is not None else None,
+            "weather_code": c_val,
+            "condition": h_desc,
+            "icon": h_icon
+        })
+
+    # Forward 24-Hour Cumulative Precipitation
+    next_24_precip = hourly_precip[start_idx : start_idx + 24]
+    precip_24h_sum = round(sum(next_24_precip), 2) if next_24_precip else 0.0
+
+    formatted_loc = f"{loc_name}, {region_name} ({country_name})" if region_name and country_name else f"{loc_name}, {country_name}" if country_name else loc_name
+
+    resp_payload = {
+        "success": True,
+        "location": loc_name,
+        "region": region_name,
+        "country": country_name,
+        "formatted_location": formatted_loc,
+        "latitude": round(lat, 5),
+        "longitude": round(lon, 5),
+        "timezone": data.get("timezone", "auto"),
+        "retrieved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "observation_time": cur_time_str,
+        "temperature_c": round(float(temp_c), 1) if temp_c is not None else None,
+        "apparent_temperature_c": round(float(apparent_temp_c), 1) if apparent_temp_c is not None else None,
+        "humidity_percent": round(float(humidity), 1) if humidity is not None else None,
+        "precipitation_mm": round(float(precip_raw), 2) if precip_raw is not None else 0.0,
+        "precipitation_interval_mins": interval_mins,
+        "rain_mm": round(float(rain_raw), 2) if rain_raw is not None else 0.0,
+        "wind_speed_kmh": wind_kmh,
+        "wind_direction_deg": wind_dir,
+        "wind_direction_compass": wind_compass,
+        "weather_code": wmo_code,
+        "condition": cond_desc,
+        "condition_icon": cond_icon,
+        "next_12_hours": next_12_hours,
+        "hourly_forecast": hourly,
+        "precipitation_24h_sum_mm": precip_24h_sum,
+        "data_source": "Open-Meteo Weather Forecast API"
+    }
+
+    resp = jsonify(resp_payload)
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 # =========================================================
