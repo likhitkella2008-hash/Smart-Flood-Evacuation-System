@@ -172,7 +172,9 @@ def dijkstra_shortest_path(
         while idx > 0:
             parent = (idx - 1) // 2
             if heap[idx][0] < heap[parent][0]:
-                heap[idx], heap[parent] = heap[parent], heap[idx]
+                temp = heap[idx]
+                heap[idx] = heap[parent]
+                heap[parent] = temp
                 idx = parent
             else:
                 break
@@ -193,7 +195,9 @@ def dijkstra_shortest_path(
                 if right < n and heap[right][0] < heap[smallest][0]:
                     smallest = right
                 if smallest != idx:
-                    heap[idx], heap[smallest] = heap[smallest], heap[idx]
+                    temp = heap[idx]
+                    heap[idx] = heap[smallest]
+                    heap[smallest] = temp
                     idx = smallest
                 else:
                     break

@@ -83,10 +83,12 @@ class BinaryHeap:
         """Restores heap invariant upward from the given index to the root."""
         current = index
         while current > 0:
-            parent = self.parent_index(current)
+            parent = (current - 1) // 2
             # If current item has higher priority than its parent, swap them
             if self._is_higher(self._heap[current], self._heap[parent]):
-                self._heap[current], self._heap[parent] = self._heap[parent], self._heap[current]
+                temp = self._heap[current]
+                self._heap[current] = self._heap[parent]
+                self._heap[parent] = temp
                 current = parent
             else:
                 break
@@ -98,8 +100,8 @@ class BinaryHeap:
 
         while True:
             highest_priority_idx = current
-            left = self.left_child_index(current)
-            right = self.right_child_index(current)
+            left = 2 * current + 1
+            right = 2 * current + 2
 
             # Check if left child has higher priority than current candidate
             if left < n and self._is_higher(self._heap[left], self._heap[highest_priority_idx]):
@@ -110,10 +112,9 @@ class BinaryHeap:
                 highest_priority_idx = right
 
             if highest_priority_idx != current:
-                self._heap[current], self._heap[highest_priority_idx] = (
-                    self._heap[highest_priority_idx],
-                    self._heap[current],
-                )
+                temp = self._heap[current]
+                self._heap[current] = self._heap[highest_priority_idx]
+                self._heap[highest_priority_idx] = temp
                 current = highest_priority_idx
             else:
                 break
@@ -200,9 +201,11 @@ class EmergencyPriorityQueue:
         """Restores max-heap invariant upward from the given index to the root in O(log N)."""
         current = index
         while current > 0:
-            parent = self.parent_index(current)
+            parent = (current - 1) // 2
             if self.is_higher_priority(self._heap[current], self._heap[parent]):
-                self._heap[current], self._heap[parent] = self._heap[parent], self._heap[current]
+                temp = self._heap[current]
+                self._heap[current] = self._heap[parent]
+                self._heap[parent] = temp
                 current = parent
             else:
                 break
@@ -214,8 +217,8 @@ class EmergencyPriorityQueue:
 
         while True:
             highest_priority_idx = current
-            left = self.left_child_index(current)
-            right = self.right_child_index(current)
+            left = 2 * current + 1
+            right = 2 * current + 2
 
             if left < n and self.is_higher_priority(self._heap[left], self._heap[highest_priority_idx]):
                 highest_priority_idx = left
@@ -224,10 +227,9 @@ class EmergencyPriorityQueue:
                 highest_priority_idx = right
 
             if highest_priority_idx != current:
-                self._heap[current], self._heap[highest_priority_idx] = (
-                    self._heap[highest_priority_idx],
-                    self._heap[current],
-                )
+                temp = self._heap[current]
+                self._heap[current] = self._heap[highest_priority_idx]
+                self._heap[highest_priority_idx] = temp
                 current = highest_priority_idx
             else:
                 break
@@ -276,3 +278,51 @@ class MinHeap:
     def peek(self) -> Optional[Tuple[float, Any]]:
         """Returns min without removing."""
         return self._heap.peek()
+
+
+# =====================================================================
+# TEXTBOOK HEAP FUNCTIONS (Matching the reference screenshot style)
+# =====================================================================
+
+def heapify(arr: List[Any], n: int, i: int) -> None:
+    """
+    Direct textbook heapify implementation using explicit variable assignments,
+    conditions, index calculations, and temporary variable swaps.
+    """
+    smallest = i
+    left = 2 * i + 1
+    right = 2 * i + 2
+
+    if left < n and arr[left] < arr[smallest]:
+        smallest = left
+
+    if right < n and arr[right] < arr[smallest]:
+        smallest = right
+
+    if smallest != i:
+        temp = arr[i]
+        arr[i] = arr[smallest]
+        arr[smallest] = temp
+
+        heapify(arr, n, smallest)
+
+
+def heap_sort(arr: List[Any]) -> List[Any]:
+    """
+    Direct textbook heap sort implementation using bottom-up heapification
+    and repeated root-to-end swaps.
+    """
+    n = len(arr)
+
+    for i in range(n // 2 - 1, -1, -1):
+        heapify(arr, n, i)
+
+    for i in range(n - 1, 0, -1):
+        temp = arr[0]
+        arr[0] = arr[i]
+        arr[i] = temp
+
+        heapify(arr, i, 0)
+
+    return arr
+

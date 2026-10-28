@@ -187,7 +187,9 @@ def heap_sort_requests(
                 candidate = right
 
             if candidate != idx:
-                arr_ref[idx], arr_ref[candidate] = arr_ref[candidate], arr_ref[idx]
+                temp = arr_ref[idx]
+                arr_ref[idx] = arr_ref[candidate]
+                arr_ref[candidate] = temp
                 idx = candidate
             else:
                 break
