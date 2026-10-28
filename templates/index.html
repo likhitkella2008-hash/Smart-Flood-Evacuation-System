@@ -296,12 +296,15 @@
 
                 <div id="weatherMessage" class="message">Loading meteorological telemetry...</div>
 
-                <!-- Verified Location Station Banner -->
+                <!-- Resolved Weather Data Location Banner -->
                 <div id="weatherLocationBanner" style="display:none; background:#09223e; border:1px solid #1e4a77; border-radius:12px; padding:14px 18px; margin:14px 0;">
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                         <div>
-                            <span style="color:#94a3b8; font-size:11.5px; text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">Verified Meteorological Station</span>
-                            <h3 id="weatherResolvedTitle" style="margin:2px 0 4px 0; color:#f8fafc; font-size:19px;">—</h3>
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <span style="color:#94a3b8; font-size:11.5px; text-transform:uppercase; letter-spacing:0.8px; font-weight:600;">Weather Data Location</span>
+                                <span style="display:inline-block; font-size:10.5px; padding:2px 8px; border-radius:10px; background:#1e3a5f; color:#38bdf8; border:1px solid #2563eb; font-weight:500;">NWP Model Analysis (Open-Meteo)</span>
+                            </div>
+                            <h3 id="weatherResolvedTitle" style="margin:4px 0 4px 0; color:#f8fafc; font-size:19px;">—</h3>
                             <div style="color:#38bdf8; font-family:monospace; font-size:12.5px;">
                                 📍 <span id="weatherResolvedCoords">—</span>
                                 <span style="margin:0 6px; color:#475569;">|</span>
@@ -318,7 +321,7 @@
                     </div>
                 </div>
 
-                <div id="weatherCards" class="card-grid">
+                <div id="weatherCards" class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
                     <div class="mini-card">
                         <h3>🌡️ Temperature</h3>
                         <strong id="weatherTemperature">—</strong>
@@ -332,12 +335,17 @@
                     <div class="mini-card">
                         <h3>💨 Wind Velocity</h3>
                         <strong id="weatherWind">—</strong>
-                        <small id="weatherWindSub" style="display:block; margin-top:4px; color:#94a3b8; font-size:11px;">10m altitude anemometer reading</small>
+                        <small id="weatherWindSub" style="display:block; margin-top:4px; color:#94a3b8; font-size:11px;">10m altitude reading</small>
                     </div>
                     <div class="mini-card">
                         <h3>🌧️ Current Precipitation</h3>
                         <strong id="weatherRain">—</strong>
                         <small id="weatherRainSub" style="display:block; margin-top:4px; color:#94a3b8; font-size:11px;">Preceding 15-minute measurement</small>
+                    </div>
+                    <div class="mini-card">
+                        <h3>☔ Rain Probability</h3>
+                        <strong id="weatherPrecipProb">—</strong>
+                        <small id="weatherPrecipProbSub" style="display:block; margin-top:4px; color:#94a3b8; font-size:11px;">Ensemble model chance of rain</small>
                     </div>
                 </div>
 
@@ -2611,20 +2619,7 @@ function promptRescueCompletion(id) {
 ========================================================= */
 
 async function useGpsForWeather() {
-    const latInput = document.getElementById("reqLatitude")?.value;
-    const lonInput = document.getElementById("reqLongitude")?.value;
     const cityInput = document.getElementById("weatherCity");
-
-    if (latInput && lonInput) {
-        const latF = parseFloat(latInput);
-        const lonF = parseFloat(lonInput);
-        if (!isNaN(latF) && !isNaN(lonF)) {
-            if (cityInput) cityInput.value = `${latF.toFixed(4)}, ${lonF.toFixed(4)}`;
-            loadLiveWeather(true, latF, lonF);
-            return;
-        }
-    }
-
     if (!navigator.geolocation) {
         alert("Browser Geolocation is not supported on this device.");
         return;
@@ -2645,6 +2640,18 @@ async function useGpsForWeather() {
             loadLiveWeather(true, lat, lon);
         },
         (err) => {
+            // Fallback to request coordinates if browser GPS is blocked
+            const latInput = document.getElementById("reqLatitude")?.value;
+            const lonInput = document.getElementById("reqLongitude")?.value;
+            if (latInput && lonInput) {
+                const latF = parseFloat(latInput);
+                const lonF = parseFloat(lonInput);
+                if (!isNaN(latF) && !isNaN(lonF)) {
+                    if (cityInput) cityInput.value = `${latF.toFixed(4)}, ${lonF.toFixed(4)}`;
+                    loadLiveWeather(true, latF, lonF);
+                    return;
+                }
+            }
             if (msg) {
                 msg.textContent = "❌ GPS access unavailable or denied. Please enter a city or region name above.";
                 msg.className = "message error";
@@ -2688,7 +2695,7 @@ async function loadLiveWeather(force = false, directLat = null, directLon = null
             }
             if (banner) banner.style.display = "none";
             // Set cards to Unavailable rather than fake zeros
-            ["weatherTemperature", "weatherHumidity", "weatherWind", "weatherRain"].forEach(id => {
+            ["weatherTemperature", "weatherHumidity", "weatherWind", "weatherRain", "weatherPrecipProb"].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.textContent = "Unavailable";
             });
@@ -2701,7 +2708,7 @@ async function loadLiveWeather(force = false, directLat = null, directLon = null
             return;
         }
 
-        // 1. Populate Verified Station Banner
+        // 1. Populate Weather Data Location Banner
         if (banner) {
             banner.style.display = "block";
             const titleEl = document.getElementById("weatherResolvedTitle");
@@ -2711,9 +2718,9 @@ async function loadLiveWeather(force = false, directLat = null, directLon = null
             const condText = document.getElementById("weatherConditionText");
             const feelsLike = document.getElementById("weatherFeelsLike");
 
-            if (titleEl) titleEl.textContent = data.formatted_location || data.location || "Resolved Station";
+            if (titleEl) titleEl.textContent = data.formatted_location || data.location || "Resolved Location";
             if (coordsEl) coordsEl.textContent = `Lat: ${data.latitude}° N, Lon: ${data.longitude}° E`;
-            if (tzEl) tzEl.textContent = `Timezone: ${data.timezone || "auto"}`;
+            if (tzEl) tzEl.textContent = `Timezone: ${data.timezone || "auto"} (${data.timezone_abbreviation || "Local"})`;
             if (condIcon) condIcon.textContent = data.condition_icon || "🌡️";
             if (condText) condText.textContent = data.condition || "Clear";
             if (feelsLike) {
@@ -2756,9 +2763,24 @@ async function loadLiveWeather(force = false, directLat = null, directLon = null
         }
         if (rainSub) {
             const rateStr = (data.precipitation_mm > 0)
-                ? ` | Intensity: ${(data.precipitation_mm * (60 / intervalMins)).toFixed(1)} mm/h`
-                : "";
-            rainSub.textContent = `Preceding ${intervalMins}-minute interval${rateStr}`;
+                ? ` | Rate: ${(data.precipitation_mm * (60 / intervalMins)).toFixed(1)} mm/h`
+                : " (No liquid accumulation)";
+            rainSub.textContent = `Preceding ${intervalMins}-min interval${rateStr}`;
+        }
+
+        // Rain Probability (Ensemble model)
+        const probEl = document.getElementById("weatherPrecipProb");
+        const probSub = document.getElementById("weatherPrecipProbSub");
+        if (probEl) {
+            probEl.textContent = (data.precipitation_probability_percent !== undefined && data.precipitation_probability_percent !== null)
+                ? `${data.precipitation_probability_percent} %`
+                : "0 %";
+        }
+        if (probSub) {
+            const pVal = data.precipitation_probability_percent ?? 0;
+            probSub.textContent = pVal > 0
+                ? `Model step probability: ${pVal}% chance`
+                : "0 mm recorded ≠ zero future probability";
         }
 
         // 3. Populate Forward Next 12 Hours Forecast Table
@@ -2773,13 +2795,15 @@ async function loadLiveWeather(force = false, directLat = null, directLon = null
                                     <th style="padding:10px 8px;">Forecast Time</th>
                                     <th style="padding:10px 8px;">Condition</th>
                                     <th style="padding:10px 8px;">Temp (°C)</th>
-                                    <th style="padding:10px 8px;">Precipitation (mm / hr)</th>
+                                    <th style="padding:10px 8px;">Precipitation (mm/h)</th>
+                                    <th style="padding:10px 8px;">Rain Chance</th>
                                     <th style="padding:10px 8px;">Advisory</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${hoursList.map(h => {
                                     const p = h.precipitation_mm ?? 0.0;
+                                    const prob = h.precipitation_probability_percent ?? 0;
                                     let badgeColor = "#22c55e";
                                     let badgeText = "Dry / Normal";
                                     if (p >= 15.0) { badgeColor = "#ef4444"; badgeText = "Torrential Hazard"; }
@@ -2790,15 +2814,16 @@ async function loadLiveWeather(force = false, directLat = null, directLon = null
                                     const timeDisplay = h.time.replace("T", " ");
                                     return `
                                         <tr style="border-bottom:1px solid #102d4d;">
-                                            <td style="padding:10px 8px; color:#cbd5e1; font-family:monospace;">${timeDisplay}</td>
-                                            <td style="padding:10px 8px; color:#f1f5f9;">${h.icon || "🌡️"} ${escapeHtml(h.condition || "—")}</td>
-                                            <td style="padding:10px 8px; color:#cbd5e1;">${h.temperature_c !== null ? `${h.temperature_c} °C` : "—"}</td>
-                                            <td style="padding:10px 8px; font-weight:bold; color:${p > 0 ? '#60a5fa' : '#94a3b8'};">${p.toFixed(1)} mm/h</td>
-                                            <td style="padding:10px 8px;">
-                                                <span style="display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; background:${badgeColor}22; color:${badgeColor}; border:1px solid ${badgeColor}66;">
-                                                    ${badgeText}
-                                                </span>
-                                            </td>
+                                             <td style="padding:10px 8px; color:#cbd5e1; font-family:monospace;">${timeDisplay}</td>
+                                             <td style="padding:10px 8px; color:#f1f5f9;">${h.icon || "🌡️"} ${escapeHtml(h.condition || "—")}</td>
+                                             <td style="padding:10px 8px; color:#cbd5e1;">${h.temperature_c !== null ? `${h.temperature_c} °C` : "—"}</td>
+                                             <td style="padding:10px 8px; font-weight:bold; color:${p > 0 ? '#60a5fa' : '#94a3b8'};">${p.toFixed(1)} mm/h</td>
+                                             <td style="padding:10px 8px; color:${prob > 20 ? '#38bdf8' : '#94a3b8'}; font-weight:500;">${prob}%</td>
+                                             <td style="padding:10px 8px;">
+                                                 <span style="display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; background:${badgeColor}22; color:${badgeColor}; border:1px solid ${badgeColor}66;">
+                                                     ${badgeText}
+                                                 </span>
+                                             </td>
                                         </tr>
                                     `;
                                 }).join("")}
@@ -2820,7 +2845,7 @@ async function loadLiveWeather(force = false, directLat = null, directLon = null
             updatedEl.innerHTML = `
                 <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
                     <div>
-                        <b>🕒 Provider Observation Time:</b> <span style="color:#e2e8f0;">${obsTime} (${data.timezone || 'Local'})</span>
+                        <b>🕒 Model Observation Step:</b> <span style="color:#e2e8f0;">${obsTime} (${data.timezone_abbreviation || data.timezone || 'Local'})</span>
                         <span style="margin:0 6px; color:#475569;">|</span>
                         <b>⚡ Telemetry Retrieved:</b> <span style="color:#86efac;">${retTime}</span>
                     </div>
@@ -2828,8 +2853,9 @@ async function loadLiveWeather(force = false, directLat = null, directLon = null
                         <b>📈 Next 24h Forward Projected Rainfall:</b> <span style="color:#60a5fa; font-weight:bold;">${proj24}</span>
                     </div>
                 </div>
-                <div style="margin-top:4px; font-size:11px; color:#64748b;">
-                    🛰️ Source: ${data.data_source || 'Open-Meteo Weather Forecast API'}. Telemetry reflects actual meteorological model observation steps, not synthetic/instantaneous estimates.
+                <div style="margin-top:6px; font-size:11px; color:#64748b; line-height:1.5;">
+                    🛰️ <b>Data Source:</b> ${data.data_source || 'Open-Meteo Weather Forecast API'}. 
+                    Telemetry reflects high-resolution Numerical Weather Prediction (NWP) model assimilation (ECMWF IFS / DWD ICON / GFS) evaluated for the resolved coordinates, not a physical on-site airport weather mast.
                 </div>
             `;
         }

@@ -53,13 +53,20 @@ class TestWeatherTelemetry(unittest.TestCase):
         # Check required meteorological metrics
         self.assertIsNotNone(data["temperature_c"])
         self.assertIsInstance(data["temperature_c"], (int, float))
+        self.assertIsNotNone(data["apparent_temperature_c"])
+        self.assertIsInstance(data["apparent_temperature_c"], (int, float))
         self.assertIsNotNone(data["humidity_percent"])
         self.assertIsInstance(data["humidity_percent"], (int, float))
         self.assertIsNotNone(data["wind_speed_kmh"])
         self.assertIsInstance(data["wind_speed_kmh"], (int, float))
         self.assertIsNotNone(data["precipitation_mm"])
         self.assertIsInstance(data["precipitation_mm"], (int, float))
+        self.assertIsNotNone(data["precipitation_probability_percent"])
+        self.assertIsInstance(data["precipitation_probability_percent"], int)
+        self.assertTrue(0 <= data["precipitation_probability_percent"] <= 100)
         self.assertEqual(data["precipitation_interval_mins"], 15)
+        self.assertIn("source_type", data)
+        self.assertIn("NWP", data["source_type"])
 
         # Verify forward-looking next 12 hours forecast
         next_12 = data.get("next_12_hours", [])
@@ -67,6 +74,7 @@ class TestWeatherTelemetry(unittest.TestCase):
         for h in next_12:
             self.assertIn("time", h)
             self.assertIn("precipitation_mm", h)
+            self.assertIn("precipitation_probability_percent", h)
             self.assertIn("temperature_c", h)
             self.assertIn("condition", h)
             self.assertIn("icon", h)
@@ -75,6 +83,7 @@ class TestWeatherTelemetry(unittest.TestCase):
         self.assertIn("observation_time", data)
         self.assertIn("retrieved_at", data)
         self.assertIn("timezone", data)
+        self.assertIn("timezone_abbreviation", data)
 
     def test_04_alternate_location_chennai(self):
         """Verifies changing location to Chennai dynamically updates coordinates and weather."""
@@ -141,6 +150,37 @@ class TestWeatherTelemetry(unittest.TestCase):
         resp = self.client.get("/api/weather?city=Coimbatore")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("no-cache", resp.headers.get("Cache-Control", ""))
+
+    def test_10_raw_api_field_integrity(self):
+        """
+        Directly queries Open-Meteo and verifies our Flask endpoint preserves
+        the exact raw meteorological metrics without rounding corruption or arbitrary shifts.
+        """
+        import requests
+        raw_url = "https://api.open-meteo.com/v1/forecast"
+        raw_params = {
+            "latitude": 11.00555,
+            "longitude": 76.96612,
+            "current": "temperature_2m,relative_humidity_2m,precipitation,rain,wind_speed_10m,wind_direction_10m,weather_code,apparent_temperature,precipitation_probability",
+            "wind_speed_unit": "kmh",
+            "timezone": "auto"
+        }
+        raw_resp = requests.get(raw_url, params=raw_params, timeout=10)
+        self.assertEqual(raw_resp.status_code, 200)
+        raw_data = raw_resp.json().get("current", {})
+
+        app_resp = self.client.get("/api/weather?lat=11.00555&lon=76.96612")
+        self.assertEqual(app_resp.status_code, 200)
+        app_data = app_resp.get_json()
+
+        # Compare raw fields directly
+        self.assertEqual(round(float(raw_data["temperature_2m"]), 1), app_data["temperature_c"])
+        self.assertEqual(round(float(raw_data["apparent_temperature"]), 1), app_data["apparent_temperature_c"])
+        self.assertEqual(round(float(raw_data["relative_humidity_2m"]), 1), app_data["humidity_percent"])
+        self.assertEqual(round(float(raw_data["wind_speed_10m"]), 1), app_data["wind_speed_kmh"])
+        self.assertEqual(raw_data["weather_code"], app_data["weather_code"])
+        self.assertEqual(round(float(raw_data["precipitation"]), 2), app_data["precipitation_mm"])
+        self.assertEqual(int(raw_data.get("precipitation_probability", 0)), app_data["precipitation_probability_percent"])
 
 
 if __name__ == "__main__":

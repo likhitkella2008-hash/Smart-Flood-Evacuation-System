@@ -513,26 +513,29 @@ def live_weather():
 
     # 4. Fetch Live Meteorological Telemetry from Open-Meteo
     try:
+        weather_params = {
+            "latitude": lat,
+            "longitude": lon,
+            "current": (
+                "temperature_2m,"
+                "relative_humidity_2m,"
+                "precipitation,"
+                "rain,"
+                "wind_speed_10m,"
+                "wind_direction_10m,"
+                "weather_code,"
+                "apparent_temperature,"
+                "precipitation_probability"
+            ),
+            "hourly": "precipitation,temperature_2m,weather_code,precipitation_probability",
+            "wind_speed_unit": "kmh",
+            "forecast_days": 2,
+            "timezone": "auto"
+        }
+        logger.info(f"Querying Open-Meteo API for coordinates ({lat}, {lon}) [{loc_name}]")
         weather_response = requests.get(
             "https://api.open-meteo.com/v1/forecast",
-            params={
-                "latitude": lat,
-                "longitude": lon,
-                "current": (
-                    "temperature_2m,"
-                    "relative_humidity_2m,"
-                    "precipitation,"
-                    "rain,"
-                    "wind_speed_10m,"
-                    "wind_direction_10m,"
-                    "weather_code,"
-                    "apparent_temperature"
-                ),
-                "hourly": "precipitation,temperature_2m,weather_code",
-                "wind_speed_unit": "kmh",
-                "forecast_days": 2,
-                "timezone": "auto"
-            },
+            params=weather_params,
             timeout=10
         )
         if weather_response.status_code == 429:
@@ -580,6 +583,7 @@ def live_weather():
     apparent_temp_c = current.get("apparent_temperature")
     humidity = current.get("relative_humidity_2m")
     precip_raw = current.get("precipitation")
+    precip_prob_raw = current.get("precipitation_probability")
     rain_raw = current.get("rain")
     wind_raw = current.get("wind_speed_10m")
     wind_dir = current.get("wind_direction_10m")
@@ -600,12 +604,20 @@ def live_weather():
     cond_desc, cond_icon = WMO_WEATHER_CODES.get(wmo_code, ("Not specified", "🌡️"))
     wind_compass = degrees_to_cardinal(wind_dir)
 
+    logger.info(
+        f"Open-Meteo received for ({lat}, {lon}) [{loc_name}]: "
+        f"time={current.get('time')}, temp={temp_c}C (feels {apparent_temp_c}C), "
+        f"humidity={humidity}%, wind={wind_kmh}km/h {wind_compass} ({wind_dir} deg), "
+        f"precip={precip_raw}mm (prob {precip_prob_raw}%), wmo={wmo_code} ({cond_desc})"
+    )
+
     # 6. Build Next 12-Hour Forward-Looking Forecast from current observation time
     cur_time_str = current.get("time", "")
     cur_hour_prefix = cur_time_str[:13] if cur_time_str else datetime.now().strftime("%Y-%m-%dT%H")
 
     hourly_times = hourly.get("time", [])
     hourly_precip = hourly.get("precipitation", [])
+    hourly_prob = hourly.get("precipitation_probability", [])
     hourly_temp = hourly.get("temperature_2m", [])
     hourly_codes = hourly.get("weather_code", [])
 
@@ -620,10 +632,12 @@ def live_weather():
         c_val = hourly_codes[i] if i < len(hourly_codes) else None
         h_desc, h_icon = WMO_WEATHER_CODES.get(c_val, ("Unknown", "🌡️"))
         p_val = hourly_precip[i] if i < len(hourly_precip) else 0.0
+        prob_val = hourly_prob[i] if i < len(hourly_prob) else None
         t_val = hourly_temp[i] if i < len(hourly_temp) else None
         next_12_hours.append({
             "time": hourly_times[i],
             "precipitation_mm": round(float(p_val), 2) if p_val is not None else 0.0,
+            "precipitation_probability_percent": int(prob_val) if prob_val is not None else 0,
             "temperature_c": round(float(t_val), 1) if t_val is not None else None,
             "weather_code": c_val,
             "condition": h_desc,
@@ -645,12 +659,14 @@ def live_weather():
         "latitude": round(lat, 5),
         "longitude": round(lon, 5),
         "timezone": data.get("timezone", "auto"),
+        "timezone_abbreviation": data.get("timezone_abbreviation", ""),
         "retrieved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "observation_time": cur_time_str,
         "temperature_c": round(float(temp_c), 1) if temp_c is not None else None,
         "apparent_temperature_c": round(float(apparent_temp_c), 1) if apparent_temp_c is not None else None,
         "humidity_percent": round(float(humidity), 1) if humidity is not None else None,
         "precipitation_mm": round(float(precip_raw), 2) if precip_raw is not None else 0.0,
+        "precipitation_probability_percent": int(precip_prob_raw) if precip_prob_raw is not None else 0,
         "precipitation_interval_mins": interval_mins,
         "rain_mm": round(float(rain_raw), 2) if rain_raw is not None else 0.0,
         "wind_speed_kmh": wind_kmh,
@@ -662,7 +678,8 @@ def live_weather():
         "next_12_hours": next_12_hours,
         "hourly_forecast": hourly,
         "precipitation_24h_sum_mm": precip_24h_sum,
-        "data_source": "Open-Meteo Weather Forecast API"
+        "data_source": "Open-Meteo Weather Forecast API",
+        "source_type": "Numerical Weather Prediction (NWP) model assimilation"
     }
 
     resp = jsonify(resp_payload)
