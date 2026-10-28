@@ -2857,6 +2857,28 @@ async function loadLiveWeather(force = false, directLat = null, directLon = null
                     🛰️ <b>Data Source:</b> ${data.data_source || 'Open-Meteo Weather Forecast API'}. 
                     Telemetry reflects high-resolution Numerical Weather Prediction (NWP) model assimilation (ECMWF IFS / DWD ICON / GFS) evaluated for the resolved coordinates, not a physical on-site airport weather mast.
                 </div>
+                <details style="margin-top:8px; border-top:1px dashed #1e4a77; padding-top:6px;">
+                    <summary style="cursor:pointer; color:#38bdf8; font-size:11px; user-select:none;">🔍 Diagnostic Telemetry Inspector (Click to expand raw verified payload)</summary>
+                    <pre style="background:#031326; border:1px solid #14355a; border-radius:6px; padding:10px; font-size:11px; color:#cbd5e1; max-height:220px; overflow-y:auto; margin-top:6px; white-space:pre-wrap;">${escapeHtml(JSON.stringify({
+                        location: data.formatted_location || data.location,
+                        coordinates: { latitude: data.latitude, longitude: data.longitude },
+                        observation_time: data.observation_time,
+                        temperature_c: data.temperature_c,
+                        apparent_temperature_c: data.apparent_temperature_c,
+                        humidity_percent: data.humidity_percent,
+                        wind_speed_kmh: data.wind_speed_kmh,
+                        wind_direction: `${data.wind_direction_compass} (${data.wind_direction_deg}°)`,
+                        current_precipitation_mm: data.precipitation_mm,
+                        precipitation_interval_mins: data.precipitation_interval_mins,
+                        precipitation_probability_percent: data.precipitation_probability_percent,
+                        weather_code: data.weather_code,
+                        condition: data.condition,
+                        timezone: data.timezone,
+                        timezone_abbreviation: data.timezone_abbreviation,
+                        data_source: data.data_source,
+                        source_type: data.source_type
+                    }, null, 2))}</pre>
+                </details>
             `;
         }
 

@@ -182,6 +182,28 @@ class TestWeatherTelemetry(unittest.TestCase):
         self.assertEqual(round(float(raw_data["precipitation"]), 2), app_data["precipitation_mm"])
         self.assertEqual(int(raw_data.get("precipitation_probability", 0)), app_data["precipitation_probability_percent"])
 
+    def test_11_safe_diagnostic_mode(self):
+        """
+        Verifies that ?diagnostic=1 returns detailed inspection data without exposing
+        sensitive credentials or secrets.
+        """
+        resp = self.client.get("/api/weather?city=Coimbatore&diagnostic=1")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertIn("diagnostic", data)
+        diag = data["diagnostic"]
+        self.assertIn("requested_endpoint", diag)
+        self.assertIn("evaluated_coordinates", diag)
+        self.assertIn("raw_units", diag)
+        self.assertIn("raw_current_snapshot", diag)
+        self.assertIn("hourly_available_fields", diag)
+        self.assertIn("timezone_info", diag)
+        # Ensure no sensitive keywords exist in the payload
+        json_str = str(data).lower()
+        self.assertNotIn("password", json_str)
+        self.assertNotIn("secret", json_str)
+        self.assertNotIn("token", json_str)
+
 
 if __name__ == "__main__":
     unittest.main()

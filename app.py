@@ -682,6 +682,25 @@ def live_weather():
         "source_type": "Numerical Weather Prediction (NWP) model assimilation"
     }
 
+    # Safe diagnostic mode: exposes raw API metrics without credentials or secrets
+    if request.args.get("diagnostic") in ("1", "true", "yes") or request.args.get("debug") in ("1", "true", "yes"):
+        resp_payload["diagnostic"] = {
+            "requested_endpoint": "https://api.open-meteo.com/v1/forecast",
+            "evaluated_coordinates": {"latitude": round(lat, 5), "longitude": round(lon, 5)},
+            "resolved_name": loc_name,
+            "raw_units": units,
+            "raw_current_snapshot": current,
+            "hourly_available_fields": list(hourly.keys()),
+            "hourly_data_points_count": len(hourly_times),
+            "start_forecast_index": start_idx,
+            "forecast_start_time": hourly_times[start_idx] if start_idx < len(hourly_times) else None,
+            "timezone_info": {
+                "timezone": data.get("timezone"),
+                "timezone_abbreviation": data.get("timezone_abbreviation"),
+                "utc_offset_seconds": data.get("utc_offset_seconds")
+            }
+        }
+
     resp = jsonify(resp_payload)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
